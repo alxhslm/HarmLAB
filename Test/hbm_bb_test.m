@@ -87,4 +87,4 @@ tic;
 sol = hbm_bb(bb,problem,A0,w0,X0,Aend,wEnd,XEnd);
 toc;
 plot(ax(1),sol.w,abs(sol.H));
-plot(ax(2),sol.w,unwrap(angle(abs(sol.H)),[],2));
+plot(ax(2),sol.w,unwrap(angle(sol.H),[],2));

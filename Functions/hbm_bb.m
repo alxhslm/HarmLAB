@@ -10,7 +10,7 @@ if any(isnan(abs(X0(:))))
 end
 u0 = packdof(A0*feval(problem.excite,hbm,problem,w0*hbm.harm.rFreqRatio));
 x0 = packdof(X0);
-H0 = hbm_objective('func',hbm,problem,w0*hbm.harm.rFreqRatio,x0,u0);
+h0 = hbm_objective('complex',hbm,problem,w0*hbm.harm.rFreqRatio,x0,u0);
 
 sol = hbm_resonance(hbm,problem,wEnd,AEnd,XEnd);
 XEnd = sol.X;
@@ -20,7 +20,7 @@ if any(isnan(abs(XEnd(:))))
 end
 xEnd = packdof(XEnd);
 uEnd = packdof(AEnd*feval(problem.excite,hbm,problem,wEnd*hbm.harm.rFreqRatio));
-HEnd = hbm_objective('func',hbm,problem,wEnd*hbm.harm.rFreqRatio,xEnd,uEnd);
+hEnd = hbm_objective('complex',hbm,problem,wEnd*hbm.harm.rFreqRatio,xEnd,uEnd);
 
 hbm.bIncludeNL = 1;
    
@@ -51,119 +51,19 @@ problem.A0   = A0;
 problem.AEnd = AEnd;
 
 switch hbm.cont.method
-      case 'eitherside'
-        [fig,ax] = hbm_bb_plot('init',hbm,problem,A0,H0,w0);
-        A = [A0 AEnd];
-        Ascale = mean([A0 AEnd]);
-        x = [x0 xEnd];
-        w = [w0 wEnd];
-        u = [u0 uEnd];       
-        H = [H0 HEnd];
-        
-        hbm_bb_plot('data',hbm,problem,A0,H0,w0);
-        hbm_bb_plot('data',hbm,problem,AEnd,HEnd,wEnd);
-        step = hbm.cont.step0;
-        Aupper  = AEnd;
-        Alower  = A0;
-        iLower = 1;
-        iUpper = 1;
-        num_err = 0;
-        bUpper = 0;
-        
-        order = 3;
-        Aplot = linspace(A0,AEnd,1000);
-        B =  poly_mat(log(Aplot),order+1);
-        for i = 1:2
-            hPred(i) = plot(ax(i),Aplot,Aplot+NaN,'b-');
-        end
-        while true
-            if bUpper
-                Apred = Aupper - step*Ascale;
-                if Apred < Alower
-                    break
-                end
-            else
-                Apred = Alower + step*Ascale;
-                if Apred > Aupper
-                    break
-                end
-            end
-
-            if iUpper > 1 && iLower >  1
-                xpred = polynomial_predictor(log(A),x,log(Apred),order);
-                [wpred,pw] = polynomial_predictor(log(A),w,log(Apred),order);
-                [Hpred,ph] = polynomial_predictor(log(A),H,log(Apred),order);
-                set(hPred(1),'YData',(B*pw)');
-                set(hPred(2),'YData',(B*ph)');
-                drawnow
-            elseif bUpper
-                xpred = xEnd;
-                wpred = wEnd;
-            else
-                xpred = x0;
-                wpred = w0;
-            end
-            
-            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
-            [Xsol,wsol] = hbm_resonance(hbm,problem,wpred,Apred,Xpred);
-            
-            xsol = packdof(Xsol);
-            usol = packdof(Apred*feval(problem.excite,hbm,problem,wsol*hbm.harm.rFreqRatio));
-            Hsol = hbm_objective('func',hbm,problem,wsol*hbm.harm.rFreqRatio,xsol,usol);
-            
-            if ~any(isnan(xsol))
-                step = step * hbm.cont.C;
-                
-                x = [x(:,1:iLower) xsol x(:,end-iUpper+1:end)];
-                u = [u(:,1:iLower) usol u(:,end-iUpper+1:end)];
-                w = [w(1:iLower) wsol w(end-iUpper+1:end)];
-                H = [H(1:iLower) Hsol H(end-iUpper+1:end)];             
-                A = [A(1:iLower) Apred A(end-iUpper+1:end)];  
-                
-                if bUpper
-                    Aupper = Apred;
-                    iUpper = iUpper + 1;
-                else
-                    Alower = Apred;
-                    iLower = iLower + 1;
-                end
-                
-                bUpper = ~bUpper;
-                
-                hbm_bb_plot('data',hbm,problem,Apred,Hsol,wsol);
-                num_err = 0;
-            else
-                step = step * hbm.cont.c;
-                bUpper = ~bUpper;
-                
-                num_err = num_err + 1;
-                hbm_bb_plot('err',hbm,problem,Apred,Hsol,wsol);
-                if num_err > hbm.cont.maxfail
-                    break;
-                end
-            end
-        end
-        hbm_bb_plot('close',hbm,problem,[],0,0);
     case 'none'
-        [~,ax] = hbm_bb_plot('init',hbm,problem,A0,H0,w0);
+        [~,ax] = hbm_bb_plot('init',hbm,problem,A0,abs(h0),w0);
         A = A0;
         Ascale = mean([A0 AEnd]);
         x = x0;
         w = w0;
         u = packdof(A*feval(problem.excite,hbm,problem,w*hbm.harm.rFreqRatio));
-        h = hbm_objective('func',hbm,problem,w*hbm.harm.rFreqRatio,x,u);
+        h = hbm_objective('complex',hbm,problem,w*hbm.harm.rFreqRatio,x,u);
         
-        hbm_bb_plot('data',hbm,problem,A0,H0,w0);
+        hbm_bb_plot('data',hbm,problem,A0,abs(h0),w0);
         step = hbm.cont.step0;
         direction = sign(AEnd-A0)*Ascale;
 
-        order = 3;
-        Aplot = logspace(0,0.07,100).^sign(AEnd-A0);
-        B =  poly_mat(log(Aplot),order+1);
-        for i = 1:2
-            hPred(i) = plot(ax(i),Aplot*A0,Aplot+NaN,'b--');
-        end
-        
         while A(end) <= AMax && A(end) >= AMin
             Apred = A(end) + step*direction;
             if Apred > AMax || Apred < AMin
@@ -171,20 +71,23 @@ switch hbm.cont.method
             end
             
             iPredict = max(length(A)-6,1):length(A);
-            Aoff = A(iPredict(1));
-            xpred = polynomial_predictor(A(iPredict),x(:,iPredict),Apred);
-            [wpred,pw] = polynomial_predictor(A(iPredict),w(iPredict),Apred);
-            [Hpred,ph] = polynomial_predictor(A(iPredict),h(iPredict),Apred);
+            if length(iPredict) > 1
+                xpred = interp1(A(iPredict),x(:,iPredict)',Apred,'pchip','extrap')';
+                wpred = interp1(A(iPredict),w(iPredict)  ,Apred,'pchip','extrap');
+            else
+                xpred = x;
+                wpred = w;
+            end
             
-            set(hPred(1),'XData',Aplot*Aoff,'YData',(B(:,1:length(pw))*pw)');
-            set(hPred(2),'XData',Aplot*Aoff,'YData',(B(:,1:length(ph))*ph)');
-            drawnow
-            
+            %now try to solve
             Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
-            [Xsol,wsol] = hbm_resonance(hbm,problem,wpred,Apred,Xpred);
-            xsol = packdof(Xsol);
-            usol = packdof(Apred*feval(problem.excite,hbm,problem,wsol*hbm.harm.rFreqRatio));
-            Hsol = hbm_objective('func',hbm,problem,wsol*hbm.harm.rFreqRatio,xsol,usol);
+            sol = hbm_resonance(hbm,problem,wpred,Apred,Xpred);
+            
+            %unpack outputs           
+            xsol = packdof(sol.X);
+            usol = packdof(sol.U);
+            Hsol = sol.H;
+            wsol = sol.w0;
             if ~any(isnan(xsol))
                 step = min(max(step * hbm.cont.C,hbm.cont.min_step),hbm.cont.max_step);
                 x(:,end+1) = xsol;
@@ -192,7 +95,7 @@ switch hbm.cont.method
                 w(end+1) = wsol;
                 h(end+1) = Hsol;               
                 A(end+1) = Apred;
-                hbm_bb_plot('data',hbm,problem,Apred,Hsol,wsol);
+                hbm_bb_plot('data',hbm,problem,Apred,abs(Hsol),wsol);
                 num_err = 0;
                 if A(end) >= AMax || A(end) <= AMin
                     break;
@@ -200,7 +103,7 @@ switch hbm.cont.method
             else
                 step = step * hbm.cont.c;
                 num_err = num_err + 1;
-                hbm_bb_plot('err',hbm,problem,Apred,Hsol,wsol);
+                hbm_bb_plot('err',hbm,problem,Apred,abs(Hsol),wsol);
                 if num_err > hbm.cont.maxfail
                     break;
                 end
@@ -208,11 +111,15 @@ switch hbm.cont.method
         end
         if num_err > hbm.cont.maxfail
             x(:,end+1) = NaN;
+            u(:,end+1) = NaN;
             w(end+1) = NaN;
+            h(end+1) = NaN;
             A(end+1) = NaN;
         else
             x(:,end+1) = xEnd;
+            u(:,end+1) = uEnd;
             w(end+1)   = wEnd;
+            h(end+1)   = hEnd;
             A(end+1)   = AEnd;
         end
         hbm_bb_plot('close',hbm,problem,[],0,0);
@@ -220,12 +127,12 @@ switch hbm.cont.method
         w = w0;
         x = x0;
         A = A0;
-        h = H0;
+        h = h0;
         Xprev = [x0; w0; A0]./problem.Xscale;
         F0 = hbm_pseudo_constraints(Xprev,hbm,problem);
         J0 = hbm_pseudo_jacobian(Xprev,hbm,problem);
                 
-        hbm_bb_plot('init',hbm,problem,A,h,w);
+        hbm_bb_plot('init',hbm,problem,A,abs(h),w);
         fprintf('STEP    PRED    CORR   STATUS  INFO     FREQ        AMP     ITER   TOT      ')
         fprintf('X(%d)       ',1:length(x0))
         fprintf('\n')       
@@ -292,7 +199,7 @@ switch hbm.cont.method
             Xlast = Xpred + Inf;
             tangent = tangent_prev;
             
-             %corrector
+            %corrector
             switch hbm.cont.predcorr.corrector
                 case 'pseudo'
                     bConverged = 0;
@@ -343,7 +250,7 @@ switch hbm.cont.method
             xCurr = X(1:end-2).*problem.Xscale(1:end-2);
             tCurr = tangent.*problem.Xscale;
             uCurr = packdof(aCurr*feval(problem.excite,hbm,problem,wCurr*hbm.harm.rFreqRatio));
-            HCurr = hbm_objective('func',hbm,problem,wCurr*hbm.harm.rFreqRatio,xCurr,uCurr);
+            hCurr = hbm_objective('complex',hbm,problem,wCurr*hbm.harm.rFreqRatio,xCurr,uCurr);
             
             step_prev = norm(X - Xprev);
 
@@ -380,7 +287,7 @@ switch hbm.cont.method
                 w(end+1) = wCurr;
                 A(end+1) = aCurr;
                 x(:,end+1) = xCurr;
-                h(end+1) = HCurr;
+                h(end+1) = hCurr;
                 t(:,end+1) = tCurr;
 
                 if bUpdateScaling
@@ -390,7 +297,7 @@ switch hbm.cont.method
                 Xsol = [x;w;A]./(repmat(problem.Xscale,1,size(x,2))); 
                 tsol = normalise(t./(repmat(problem.Xscale,1,size(t,2))));
 
-                hbm_bb_plot('data',hbm,problem,aCurr,HCurr,wCurr);
+                hbm_bb_plot('data',hbm,problem,aCurr,abs(hCurr),wCurr);
 
             else
                 %failed
@@ -417,7 +324,7 @@ switch hbm.cont.method
                         step = min(1.1 * step * hbm.cont.min_step / step_prev,hbm.cont.max_step);
                         flag{end+1} = 'Failed: Step too small';
                         info = 'Sml';
-                    end
+                    end 
                 else
                     %failed to converge
                     if any(abs(X - Xlast) > hbm.cont.xtol)
@@ -433,7 +340,7 @@ switch hbm.cont.method
                     step = max(step * hbm.cont.c,hbm.cont.min_step);
                 end
                 
-                hbm_bb_plot('err',hbm,problem,aCurr,HCurr,wCurr);
+                hbm_bb_plot('err',hbm,problem,aCurr,hCurr,wCurr);
                 num_fail = num_fail + 1;
                 if num_fail > 4
                     break
@@ -451,12 +358,12 @@ switch hbm.cont.method
         data.problem = problem;
         
         prob = coco_prob();
-        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', [x0(:); w0; A0]./Xscale);
+        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', [x0(:); w0; A0]./problem.Xscale);
         prob = coco_add_pars(prob, 'pars', length(x0)+2, 'A');
         prob = coco_add_slot(prob, 'plot', @hbm_coco_callback, data, 'bddat');
 
         prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
-        bd = coco(prob, 'temp', [], 1, 'A', [AMin AMax]./Xscale(end));
+        bd = coco(prob, 'temp', [], 1, 'A', [AMin AMax]./problem.Xscale(end));
         hbm_bb_plot('close',hbm,problem,[],[],[]);
         
         %extract the solutions
@@ -471,9 +378,9 @@ switch hbm.cont.method
             w(i) = chart.x(end-2);
             A(i) = chart.x(end);
         end
-        w = w .* Xscale(end-1);
-        A = A .* Xscale(end);
-        x = x .* (Xscale(1:end-2)*(0*w'+1));
+        w = w .* problem.Xscale(end-1);
+        A = A .* problem.Xscale(end);
+        x = x .* (problem.Xscale(1:end-2)*(0*w'+1));
         fclose all;
         try
             rmdir('data','s')
@@ -504,7 +411,6 @@ if ~exist('f','var')
     end
 end
 F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
-
 
 if ~exist('h','var')
     h = 0*w;
@@ -559,30 +465,6 @@ for i = 1:N
     end
 end
 
-% function [X_extrap,p] = polynomial_predictor(s,X,s_extrap,order)
-% N = length(s);
-% if nargin < 4
-%     order = N-1;
-% end
-% A = poly_mat(s,order+1);
-% p = A\X';
-% B = poly_mat(s_extrap,order+1);
-% X_extrap = (B*p)';
-% 
-% function [A,Ad] = poly_mat(s,N)
-% A = zeros(length(s),N);
-% Ad = zeros(length(s),N);
-% for i = 1:N
-%     A(:,i) = s.^(i-1);
-%     if nargout > 1
-%         if i > 1
-%             Ad(:,i) = (i-1)*s.^(i-2);
-%         else
-%             Ad(:,i) = 0*s;
-%         end
-%     end
-% end
-
 function t = pseudo_null(A)
 [U,S,V] = svd(A,0);
 t = V(:,end);
@@ -600,7 +482,7 @@ U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
 c = hbm_balance3d('func',hbm,problem,w0,u,x);
-c(end+1) = resonance_condition(hbm,problem,w,x,A);
+c(end+1) = resonance_condition(hbm,problem,w0,x,A); 
 
 function J = hbm_pseudo_jacobian(X,hbm,problem)
 
@@ -619,48 +501,34 @@ Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
 Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 Da = hbm_balance3d('derivA',hbm,problem,w0,u,x);
 
-res0 = resonance_condition(hbm,problem,w,x,A);
-h = 1E-10;
-x0 = x;
-for i = 1:length(x)
-    x = x0;
-    x(i) = x(i) + h;
-    drdx(i) = (resonance_condition(hbm,problem,w,x,A) - res0)/h;
-    i
-end
+% [drdx,drdw,drdA] = hbm_objective({'jacobW','derivW2','derivWA'},hbm,problem,w0,x,u);
 
-drdw = (resonance_condition(hbm,problem,w+h,x0,A) - res0)/h;
-drdA = (resonance_condition(hbm,problem,w,x0,A+h) - res0)/h;
+[~,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A);
 
 J = [Jx   Dw    Da;
      drdx drdw drdA];
 
 J = J .* repmat(Xscale(:)',size(J,1),1);
 
-function Hw = resonance_condition(hbm,problem,w,x,A)
-w0 = w * hbm.harm.rFreqRatio;
+function [r,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A)
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 
-Hw = hbm_peak(x,w0,A,hbm,problem,Jx,Dw);
+r = hbm_objective({'derivW'},hbm,problem,w0,x,u);
+r = -problem.res.sign*r;
 
-function dHdw = hbm_peak(x,w0,A,hbm,problem,Jx,Dw)
-x0 = x;
-obj0 = hbm_obj(x0,w0,A,hbm,problem);
+if nargout > 1
+    h = 1E-10;
+    x0 = x;
+    for i = 1:length(x)
+        x = x0;
+        x(i) = x(i) + h;
+        drdx(i) = (resonance_condition(hbm,problem,w0,x,A) - r)/h;
+    end
 
-h = 1E-10;
-Gx = 0*x;
-for i = 1:length(x)
-    x = x0;
-    x(i) = x(i) + h;
-    Gx(i) = (hbm_obj(x,w0,A,hbm,problem)-obj0)/h;
+    drdw = (resonance_condition(hbm,problem,w0+h,x0,A) - r)/h;
+    drdA = (resonance_condition(hbm,problem,w0,x0,A+h) - r)/h;
 end
-
-Gw = (hbm_obj(x0,w0+h,A,hbm,problem)-obj0)/h;
-
-dHdw = Gw - Gx'*(Jx\Dw);
 
 function obj = hbm_obj(x,w0,A,hbm,problem)
 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
@@ -707,7 +575,7 @@ u = packdof(U);
 
 c = hbm_balance3d('func',hbm,problem,w0,u,x);
 
-c(end+1) = resonance_condition(hbm,problem,w,x,A);
+c(end+1) = resonance_condition(hbm,problem,w0,x,A);
 
 function [data, J] = hbm_coco_jacobian(prob, data, u)
 hbm = data.hbm;
@@ -728,10 +596,10 @@ Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 Da = hbm_balance3d('derivA',hbm,problem,w0,u,x)/A;
 
 %now get the derivatives of the resonance condition
-[~,Hwx, Hw2, HwA] = resonance_condition(hbm,problem,w,x,A);
+[~,drdx, drdw, drdA] = resonance_condition(hbm,problem,w0,x,A);
 
 J = [Jx  Dw  Da;
-     Hwx Hw2 HwA];
+     drdx drdw drdA];
 
 J = J .* repmat(Xscale(:)',size(J,1),1);
 
@@ -759,7 +627,7 @@ c(end+1) = resonance_condition(hbm,problem,w0,x,A);
 
 f = [c;
      s - step];
-      
+ 
 if nargout > 1
     J = hbm_arclength_jacobian(Xcurr,hbm,problem,Xprev,tangent_prev,step);
 end
@@ -784,7 +652,7 @@ Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 Da = hbm_balance3d('derivA',hbm,problem,w0,u,x)/A;
 
 %now get the derivatives of the resonance condition
-[~,Hwx, Hw2, HwA] = resonance_condition(hbm,problem,w,x,A);
+[~,Hwx, Hw2, HwA] = resonance_condition(hbm,problem,w0,x,A);
 
 J = [Jx  Dw  Da;
      Hwx Hw2 HwA];
@@ -792,4 +660,3 @@ J = [Jx  Dw  Da;
 J = J .* repmat(Xscale(:)',size(J,1),1);
 
 J(end+1,:) = sgn*((Xcurr - Xprev)'+eps)./(norm(Xcurr - Xprev)+eps);
-J = sparse(J);
