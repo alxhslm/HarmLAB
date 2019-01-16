@@ -69,7 +69,7 @@ end
 
 x = X.*problem.xscale;
 sol.X = unpackdof(x(1:Nhbm),hbm.harm.NFreq-1,problem.NDof,iRetain);
-sol.xalg = permute(reshape(x(Nhbm+1:end,:),NAlg,Nfft(1),Nfft(2)),[2 3 1]);
+sol.xalg = squeeze(permute(reshape(x(Nhbm+1:end,:),NAlg,Nfft(1),Nfft(2)),[2 3 1]));
 sol.w0 = w0;
 
 w = w0*hbm.harm.rFreqRatio;

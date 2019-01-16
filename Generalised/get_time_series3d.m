@@ -120,23 +120,24 @@ else
                 xddoti(:,i) = interp1(t1,xddot(:,:,i),ti);
             end
         end
-        if nargin > 3 && ~isempty(xalg)
-            for i = 1:size(xalg,3)
-                xalgi(:,i) = interp1(t1,xalg(:,:,i),ti);
-            end
+    end
+    if nargin > 3 && ~isempty(xalg)
+        for i = 1:size(xalg,3)
+            xalgi(:,i) = interp1(t1,xalg(:,:,i),ti);
         end
     end
 end
 
 varargout{1} = ti;
 varargout{2} = xi;
-if nargin > 3 && ~isempty(xalg)
-    varargout{3} = xalgi;
-end
 
 if nargout >2
-    varargout{4} = xdoti;
+    varargout{3} = xdoti;
     if nargout > 3
-        varargout{5} = xddoti;
+        varargout{4} = xddoti;
+        if nargout > 4
+            varargout{5} = xalgi;
+        end
     end
 end
+
