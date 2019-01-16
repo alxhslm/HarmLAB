@@ -134,7 +134,7 @@ end
 if isfield(problem,'res')
     f = {'input','output','iInput','iOutput','iHarm'};
 
-    if ~isfield(problem,f{i})
+    if ~isfield(problem.res,f{i})
         error('Missing field %s from resonance condition',f{i})
     end
 
