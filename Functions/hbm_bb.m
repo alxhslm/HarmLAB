@@ -577,10 +577,8 @@ A = X(end).*Xscale(end);
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = [hbm_balance3d('func',hbm,problem,w0,u,x);
-     hbm_constraints('func',hbm,problem,w0,x,u)];
-
-% c(end+1) = resonance_condition(hbm,problem,w,x,A);
+c = hbm_balance3d('func',hbm,problem,w0,u,x);
+c(end+1) = resonance_condition(hbm,problem,w,x,A);
 
 function J = hbm_pseudo_jacobian(X,hbm,problem)
 
@@ -599,23 +597,18 @@ Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
 Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 Da = hbm_balance3d('derivA',hbm,problem,w0,u,x);
 
+res0 = resonance_condition(hbm,problem,w,x,A);
+h = 1E-10;
+x0 = x;
+for i = 1:length(x)
+    x = x0;
+    x(i) = x(i) + h;
+    drdx(i) = (resonance_condition(hbm,problem,w,x,A) - res0)/h;
+    i
+end
 
-drdx = hbm_constraints('jacobX',hbm,problem,w0,x,u);
-drdw = hbm_constraints('derivW',hbm,problem,w0,x,u);
-drdA = hbm_constraints('derivA',hbm,problem,w0,x,u);
-
-% res0 = resonance_condition(hbm,problem,w,x,A);
-% h = 1E-10;
-% x0 = x;
-% for i = 1:length(x)
-%     x = x0;
-%     x(i) = x(i) + h;
-%     drdx(i) = (resonance_condition(hbm,problem,w,x,A) - res0)/h;
-%     i
-% end
-% 
-% drdw = (resonance_condition(hbm,problem,w+h,x0,A) - res0)/h;
-% drdA = (resonance_condition(hbm,problem,w,x0,A+h) - res0)/h;
+drdw = (resonance_condition(hbm,problem,w+h,x0,A) - res0)/h;
+drdA = (resonance_condition(hbm,problem,w,x0,A+h) - res0)/h;
 
 J = [Jx   Dw    Da;
      drdx drdw drdA];

@@ -1,10 +1,13 @@
 function sol = hbm_resonance(hbm,problem,w0,A,xIn)
 NDof = problem.NDof;
+NAlg = problem.NAlg;
+Nfft  = hbm.harm.Nfft;
 
 %setup the problem for IPOPT
 
 hbm.bIncludeNL = 1;
 NComp = hbm.harm.NComp;
+Nhbm  = hbm.harm.NRetain;
 
 % %first solve @ w0
 % x0 = hbm_solve(hbm,problem,w0,A,xIn);
@@ -55,7 +58,7 @@ while ~bSuccess && iter < hbm.max_iter
             bSuccess = EXITFLAG == 1;
         case 'ipopt'
             options.jacobianstructure  = Jstr;
-            options.jacobian  = @hbm_jacobian;
+            options.jacobian = @hbm_jacobian;
             options.gradient = @hbm_grad;
             options.print_level = 5;
             options.max_iter = maxit;
@@ -79,11 +82,14 @@ end
 % dHdw = G(end) - G(1:end-1)*(J(:,1:end-1)\J(:,end));
 
 w0 = abs(X(end).*problem.wscale);
+w = w0*hbm.harm.rFreqRatio;
 x = X(1:end-1).*problem.xscale;
-sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof);
+
+sol.X = unpackdof(x(1:Nhbm),hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
+sol.xalg = squeeze(permute(reshape(x(Nhbm+1:end,:),NAlg,Nfft(1),Nfft(2)),[2 3 1]));
 
 sol.w0 = w0;
-w = w0*hbm.harm.rFreqRatio;
+sol.w = w;
 
 sol.U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(sol.U);
@@ -128,14 +134,27 @@ w0 = w * hbm.harm.rFreqRatio;
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-cnl = hbm_balance3d('func',hbm,problem,w0,u,x);
-cUser = hbm_constraints('func',hbm,problem,w0,x,u);
-c = [cnl; cUser];
+c = hbm_balance3d('func',hbm,problem,w0,u,x);
+
+function J = hbm_jacobian(X,hbm,problem,A)
+x = X(1:end-1).*problem.xscale;
+w = X(end).*problem.wscale;
+w0 = w * hbm.harm.rFreqRatio;
+
+U = A*feval(problem.excite,hbm,problem,w0);
+u = packdof(U);
+
+Jx_nl = hbm_balance3d('jacob',hbm,problem,w0,u,x);
+Dw_nl = hbm_balance3d('derivW',hbm,problem,w0,u,x);
+
+
+J = [Jx_nl  Dw_nl];
+J = J .* problem.Jscale;
 
 function [obj,G] = hbm_fsolve_obj(X,hbm,problem,A)
 obj = hbm_obj(X,hbm,problem,A);
 if nargout > 1
-G =  hbm_grad(X,hbm,problem,A)';
+    G =  hbm_grad(X,hbm,problem,A)';
 end
 
 function [c,ceq,Jc,Jceq] = hbm_fsolve_constr(X,hbm,problem,A)
@@ -153,21 +172,3 @@ if nargout > 2
 %     Jceq = Jceq(1:end-1,:)';
 end
 
-function J = hbm_jacobian(X,hbm,problem,A)
-x = X(1:end-1).*problem.xscale;
-w = X(end).*problem.wscale;
-w0 = w * hbm.harm.rFreqRatio;
-
-U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(U);
-
-Jx_nl = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw_nl = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-
-JxUser = hbm_constraints('jacobX',hbm,problem,w0,x,u);
-DwUser = hbm_constraints('derivW',hbm,problem,w0,x,u);
-
-J = [Jx_nl  Dw_nl;
-     JxUser DwUser];
-
-J = J .* problem.Jscale;
