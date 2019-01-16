@@ -32,35 +32,37 @@ else
 end
 
 %and actually solve it
-iter = 0;
 hbm.max_iter = 3;
 bSuccess = false;
+
+constr_tol = 1E-6;
+maxit = 20;
 
 X0 = x0./problem.xscale;
 % F0 = feval(funcs.constraints,X0,options.auxdata);
 % J0 = feval(funcs.jacobian,X0,options.auxdata);
 
-while ~bSuccess && iter < hbm.max_iter
+attempts = 0;
+while ~bSuccess && attempts < hbm.max_iter
     switch hbm.options.solver
-        case 'nleqn'
-             [X,info] = nleqn(@(x)hbm_constraints(x,hbm,problem,w0,u),X0);
-             bSuccess = ~info;
         case 'fsolve'
              fun_constr = @(x)hbm_constraints(x,hbm,problem,w0,u);
-             options = optimoptions('fsolve','Display','iter','SpecifyObjectiveGradient',true);
-             [X,~,EXITFLAG] = fsolve(fun_constr,X0,options);
+             options = optimoptions('fsolve','Display','iter','SpecifyObjectiveGradient',true,'FunctionTolerance',constr_tol,'MaxIterations',maxit);
+             [X,~,EXITFLAG,OUTPUT] = fsolve(fun_constr,X0,options);
              bSuccess = EXITFLAG == 1;
+             iter = OUTPUT.iterations + 1;
         case 'ipopt'
             options.jacobian = @hbm_jacobian;
             options.jacobianstructure = hbm.sparsity;
             options.print_level = 5;
-            options.max_iter = 15;           
-            
+            options.max_iter = maxit;           
+            options.constr_viol_tol = constr_tol;
             [X, info] = fipopt('',X0,@hbm_constraints,options,hbm,problem,w0,u);
             bSuccess = any(info.status == [0 1]);
+            iter = info.iter;
     end
     X0 = X + 1E-8*rand(Nhbm+prod(Nfft)*NAlg,1);
-    iter = iter + 1;
+    attempts = attempts + 1;
 end
 if ~bSuccess
     X = X + NaN;
@@ -83,6 +85,8 @@ sol.A = A;
 
 %floquet multipliers
 sol.L = floquetMultipliers(hbm,problem,w,u,x);
+
+sol.it = iter;
 
 function [c,J] = hbm_constraints(X,hbm,problem,w0,u)
 %unpack the inputs

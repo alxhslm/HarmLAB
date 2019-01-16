@@ -51,7 +51,8 @@ switch hbm.cont.method
         w = w0;
         x = x0;
         u = u0;
-        
+        it = [];
+        s = [];
         wscale = mean([w0 wEnd]);
         
         hbm_frf_plot('data',hbm,problem,x0,w0,A);
@@ -84,6 +85,8 @@ switch hbm.cont.method
                 x(:,end+1) = xsol;
                 u(:,end+1) = usol;
                 w(end+1) = wsol;
+                it(end+1) = sol.it;
+                s(end+1) = step;
                 hbm_frf_plot('data',hbm,problem,xsol,wsol,A);
                 num_err = 0;
                 if w(end) >= wMax || w(end) <= wMin
@@ -99,20 +102,16 @@ switch hbm.cont.method
                 end
             end
         end
-        if num_err > hbm.cont.maxfail
-            x(:,end+1) = NaN;
-            u(:,end+1) = NaN;
-            w(end+1)   = NaN;
-        else
-            x(:,end+1) = xEnd;
-            u(:,end+1) = uEnd;
-            w(end+1)   = wEnd;
-        end
+        
+        x(:,end+1) = xEnd;
+        u(:,end+1) = uEnd;
+        w(end+1)   = wEnd;
+        it(end+1)  = 0;
+        s(end+1) = 0;
+        
         hbm_frf_plot('close',hbm,problem,[],[],[]);
         
         debug = struct();
-        s = 0*w;
-        it = 0*w;
     case 'predcorr'              
         w = w0; wCurr = w0;
         x = x0; xCurr = x0;

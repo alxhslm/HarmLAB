@@ -55,7 +55,8 @@ switch hbm.cont.method
         w = w0;
         u = u0;
         h = h0;
-        
+        it = [];
+        s = [];
         Ascale = mean([A0 AEnd]);
         
         hbm_bb_plot('data',hbm,problem,A0,abs(h0),w0);
@@ -94,6 +95,8 @@ switch hbm.cont.method
                 w(end+1) = wsol;
                 h(end+1) = Hsol;               
                 A(end+1) = Apred;
+                it(end+1) = sol.it;
+                s(end+1) = step;
                 hbm_bb_plot('data',hbm,problem,Apred,abs(Hsol),wsol);
                 num_err = 0;
                 if A(end) >= AMax || A(end) <= AMin
@@ -109,24 +112,18 @@ switch hbm.cont.method
                 end
             end
         end
-        if num_err > hbm.cont.maxfail
-            x(:,end+1) = NaN;
-            u(:,end+1) = NaN;
-            w(end+1) = NaN;
-            h(end+1) = NaN;
-            A(end+1) = NaN;
-        else
-            x(:,end+1) = xEnd;
-            u(:,end+1) = uEnd;
-            w(end+1)   = wEnd;
-            h(end+1)   = hEnd;
-            A(end+1)   = AEnd;
-        end
+
+        x(:,end+1) = xEnd;
+        u(:,end+1) = uEnd;
+        w(end+1)   = wEnd;
+        h(end+1)   = hEnd;
+        A(end+1)   = AEnd;
+        it(end+1) = 0;
+        s(end+1) = 0;
+        
         hbm_bb_plot('close',hbm,problem,[],0,0);
         
         debug = struct();
-        s = 0*w;
-        it = 0*w;
     case 'predcorr'
         w = w0; wCurr = w0;
         x = x0; xCurr = x0;

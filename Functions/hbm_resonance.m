@@ -31,31 +31,25 @@ problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 X0 = [x0; w0]./problem.Xscale;
 
 %and actually solve it
-iter = 0;
 hbm.max_iter = 4;
 bSuccess = false;
 Jstr = [hbm.sparsity ones(NDof*NComp,1)];
-
-% obj0 = hbm_obj(X0,hbm,problem,A);
-% G0 = hbm_grad(X0,hbm,problem,A);
-% J0 = hbm_jacobian(X0,hbm,problem,A);
-% F0 = hbm_constr(X0,hbm,problem,A);
-% 
-% dHdw0 = G0(end) - G0(1:end-1)*(J0(:,1:end-1)\J0(:,end));
 
 constr_tol = 1E-6;
 opt_tol = 1E-6;
 maxit = 20;
 
-while ~bSuccess && iter < hbm.max_iter
+attempts = 0;
+while ~bSuccess && attempts < hbm.max_iter
     switch hbm.options.solver
         case 'fsolve'
             fun_obj = @(x)hbm_fsolve_obj(x,hbm,problem,A);
             fun_constr = @(x)hbm_fsolve_constr(x,hbm,problem,A);
             options = optimoptions('fmincon','SpecifyObjectiveGradient',true,'SpecifyConstraintGradient',true,'Display','iter',...
                 'OptimalityTolerance',opt_tol,'ConstraintTolerance',constr_tol,'MaxIterations',maxit);
-            [X,~,EXITFLAG] = fmincon(fun_obj,X0,[],[],[],[],[],[],fun_constr,options);
+            [X,~,EXITFLAG,OUTPUT] = fmincon(fun_obj,X0,[],[],[],[],[],[],fun_constr,options);
             bSuccess = EXITFLAG == 1;
+            iter = OUTPUT.iterations + 1;
         case 'ipopt'
             options.jacobianstructure  = Jstr;
             options.jacobian = @hbm_jacobian;
@@ -66,9 +60,10 @@ while ~bSuccess && iter < hbm.max_iter
             options.constr_viol_tol = constr_tol;
             [X, info] = fipopt(@hbm_obj,X0,@hbm_constr,options,hbm,problem,A);           
             bSuccess = any(info.status == [0 1]);
+            iter = info.iter;
     end
     X0 = X+rand(length(X),1)*1E-8;
-    iter = iter + 1;
+    attempts = attempts + 1;
 end
 if ~bSuccess
     X = X + NaN;
@@ -103,6 +98,8 @@ sol.H = hbm_objective('complex',hbm,problem,w,x,u);
 
 %floquet multipliers
 sol.L = floquetMultipliers(hbm,problem,w,u,x);
+
+sol.it = iter;
 
 function obj = hbm_obj(X,hbm,problem,A)
 x = X(1:end-1).*problem.xscale;
