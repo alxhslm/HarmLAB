@@ -26,7 +26,7 @@ if isfield(problem,'xhscale')
     problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
     bUpdateScaling = 0;
 else
-    problem = update_scaling(problem,hbm,x0,w0);
+    problem = hbm_scaling(problem,hbm,x0,w0);
     bUpdateScaling = 1;
 end
 
@@ -192,7 +192,7 @@ switch hbm.options.cont_method
 %                 lambda(:,end+1) = floquetMultipliers(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
                 
                 if bUpdateScaling
-                    problem = update_scaling(problem,hbm,x(:,end),w(end));
+                    problem = hbm_scaling(problem,hbm,x(:,end),w(end));
                 end
 
                 Xsol = [x;w]./(repmat(problem.Xscale,1,size(x,2))); 
@@ -303,7 +303,7 @@ switch hbm.options.cont_method
         flag = {};
 %         lambda = lambda0;
         
-        problem = update_scaling(problem,hbm,x0,w0);
+        problem = hbm_scaling(problem,hbm,x0,w0);
         Xprev = [x0; w0]./problem.Xscale;
         Xend = [xEnd;wEnd]./problem.Xscale;
         step = hbm.cont.step0;
@@ -417,7 +417,7 @@ switch hbm.options.cont_method
                         f(:,end+1) = fCurr(:,end);
                         s(end+1) = sCorrCurr(end);
                         
-                        problem = update_scaling(problem,hbm,x(:,end),w(end));
+                        problem = hbm_scaling(problem,hbm,x(:,end),w(end));
 
                         Xprev = [x(:,end); w(end)]./ problem.Xscale;
                         tangent_prev = tangent ./ problem.Xscale;
@@ -570,19 +570,6 @@ else
 end
 B = poly_mat(s(end) + s_extrap,N);
 X_extrap = (B*p)';
-
-function problem = update_scaling(problem,hbm,x,w)
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-xdc  = max(abs(X(1,:)),1E-6);
-xmax = max(max(abs(X(2:end,:)),[],1),1E-6);
-xharm = repmat(xmax,hbm.harm.NFreq-1,1);
-% xharm = max(abs(X(2:end,:)),1E-10);
-xscale = [xdc; xharm*(1+1i)];
-problem.xscale = packdof(xscale,hbm.harm.iRetain);
-problem.wscale = w;
-problem.Fscale = x*0+1;
-problem.Xscale = [problem.xscale; problem.wscale];
-problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 
 function [A,Ad] = poly_mat(s,N)
 A = zeros(length(s),N);

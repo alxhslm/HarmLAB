@@ -21,6 +21,12 @@ if ~isfield(hbm,'dependence')
 end
 hbm.dependence = setupDependence(hbm.dependence);
 
+%% Scaling
+if ~isfield(hbm,'scaling')
+    hbm.scaling = struct();
+end
+hbm.scaling = setupScaling(hbm.scaling);
+
 %% Continuation
 if ~isfield(hbm,'cont')
     hbm.cont = struct(); 
@@ -66,6 +72,10 @@ options = default_missing(options,{'aft_method','jacob_method'},{'mat','mat'});
 function dependence = setupDependence(dependence)
 dependence = default_missing(dependence,{'x','xdot','xddot','w','u','udot','uddot','xalg'},{true,false,false,false,false,false,false,false});
 
+function scaling = setupScaling(scaling)
+scaling = default_missing(scaling,{'method','tol'},{'max',1E-6});
+
+
 function cont = setupCont(cont)
 cont = default_missing(cont,{'bUpdate','step0','min_step','max_step','ftol','xtol','c', 'C','maxfail','num_iter_increase','num_iter_reduce'},{true,1E-3, 1E-6, 5E-3, 1E-6,1E-6,0.5, 1.05,4,10,3});
 
@@ -79,6 +89,9 @@ if ~isfield(cont,'arclength'), cont.arclength = struct(); end
 cont.arclength = default_missing(cont.arclength,{'maxit','solver'},{30,'ipopt'});
 
 function problem = setupProblem(problem)
+if ~isfield(problem,'name')
+    problem.name = '';
+end
 if ~isfield(problem,'NDof')
     problem.NDof = size(problem.K,2);
 end
@@ -115,6 +128,10 @@ for i = 1:length(f)
     elseif  size(problem.(f{i}),1) ~= problem.NDof || size(problem.(f{i}),2) ~= problem.NInput 
         error('Wrong size for %s matrix',f{i})
     end
+end
+
+if ~isfield(problem,'iGroup')
+    problem.iGroup = ones(problem.NDof,1);
 end
 
 function harm = setupGroups(problem,harm)

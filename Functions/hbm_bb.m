@@ -27,7 +27,7 @@ HEnd = hbm_objective('func',hbm,problem,wEnd*hbm.harm.rFreqRatio,xEnd,uEnd);
 
 hbm.bIncludeNL = 1;
 
-if ~strcmp(hbm.options.cont_method,'none')
+if ~strcmp(hbm.cont.method,'none')
 %     Xmax = max(abs(X0),[],1);
 %     Xscale = [Xmax; repmat(Xmax,hbm.harm.NFreq-1,1)*(1+1i)];
 %     Xscale = packdof(Xscale);
@@ -46,7 +46,7 @@ if ~strcmp(hbm.options.cont_method,'none')
         problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
         bUpdateScaling = 0;
     else
-        problem = update_scaling(problem,hbm,x0,w0,A0);
+        problem = hbm_scaling(problem,hbm,x0,w0,A0);
         bUpdateScaling = 1;
     end
 end
@@ -65,7 +65,7 @@ problem.AMin = AMin;
 problem.A0   = A0;
 problem.AEnd = AEnd;
 
-switch hbm.options.cont_method
+switch hbm.cont.method
       case 'eitherside'
         [fig,ax] = hbm_bb_plot('init',hbm,problem,A0,H0,w0);
         A = [A0 AEnd];
@@ -347,7 +347,7 @@ switch hbm.options.cont_method
                 t(:,end+1) = tCurr;
 
                 if bUpdateScaling
-                    problem = update_scaling(problem,hbm,x(:,end),w(end),A(end));
+                    problem = hbm_scaling(problem,hbm,x(:,end),w(end),A(end));
                 end
 
                 Xsol = [x;w;A]./(repmat(problem.Xscale,1,size(x,2))); 
@@ -459,39 +459,28 @@ switch hbm.options.cont_method
         fprintf('%+0.5e   ',x)
         fprintf('\n')
         
-        ipopt_options.cl = 0*[x0;w0;A0];
-        ipopt_options.cu = 0*[x0;w0;A0];
-        ipopt_options.ipopt.hessian_approximation = 'limited-memory';
-        ipopt_options.ipopt.print_level = 0;
-        ipopt_options.ipopt.max_iter = 30;
-        ipopt_options.auxdata = {hbm,problem,Xprev,step};
-        
-        funcs.objective = @(x,auxdata)0;
-        funcs.gradient = @(x,auxdata)(0*[x0; w0; A0]);
-        funcs.constraints = @hbm_arclength_constraints;
-        funcs.jacobian = @hbm_arclength_jacobian;
+        ipopt_options.print_level = 0;
+        ipopt_options.max_iter = 30;
+        ipopt_options.jacobian = @hbm_arclength_jacobian;
         
         Jstr = hbm.sparsity;
         Jstr(:,end+1) = 1;
         Jstr(:,end+1) = 1;
         Jstr(end+1,:) = 1;
         Jstr(end+1,:) = 1;
-        Jstr = sparse(Jstr);
-        funcs.jacobianstructure = @(X)Jstr;
+        ipopt_options.jacobianstructure = Jstr;
         
-        J = full(feval(funcs.jacobian,Xprev,ipopt_options.auxdata));
+        J = hbm_arclength_constraints(Xprev,hbm,problem,Xprev,step);
         temp = null(J(1:end-1,:));
         tangent = temp * sign(temp(end));
         
         while A(end) <= AMax && A(end) >= AMin            
             info.status = 1;
             num_fail = 0;
-            ipopt_options.auxdata{3} = Xprev;
             
             while info.status
-                ipopt_options.auxdata{4} = step;
                 X0 = Xprev + step*tangent;
-                [X,info] = ipopt_auxdata(X0,funcs,ipopt_options);
+                [X,info] = fipopt('',X0,@hbm_arclength_constraints,ipopt_options,hbm,problem,Xprev,step);
                 
                 num_step = num_step + 1;
                 
@@ -514,11 +503,12 @@ switch hbm.options.cont_method
                         elseif info.iter > 10
                             step = step / hbm.cont.arclength.C;
                         end
-                        Xprev = X;
-                        J = full(feval(funcs.jacobian,Xprev,ipopt_options.auxdata));
+                        J = hbm_arclength_constraints(X,hbm,problem,Xprev,step);
                         temp = null(J(1:end-1,:));
                         tangent = sign(temp'*tangent)*temp;
-    
+                        
+                        Xprev = X;
+
                         %store the data
                         w(end+1) = wCurr;
                         x(:,end+1) = xCurr;
@@ -633,20 +623,6 @@ end
 %         end
 %     end
 % end
-
-function problem = update_scaling(problem,hbm,x,w,A)
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-xdc  = max(abs(X(1,:)),1E-6);
-xmax = max(max(abs(X(2:end,:)),[],1),1E-6);
-xharm = repmat(xmax,hbm.harm.NFreq-1,1);
-% xharm = max(abs(X(2:end,:)),1E-10);
-xscale = [xdc; xharm*(1+1i)];
-problem.xscale = packdof(xscale,hbm.harm.iRetain);
-problem.wscale = 1;%w;
-problem.Ascale = 1E-4;%A;
-problem.Fscale = ones(length(problem.xscale)+problem.constr.N,1);
-problem.Xscale = [problem.xscale; problem.wscale; problem.Ascale];
-problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 
 function t = pseudo_null(A)
 [U,S,V] = svd(A,0);
@@ -809,8 +785,7 @@ J = J .* repmat(Xscale(:)',size(J,1),1);
 
 %% Arclength files
 
-function f = hbm_arclength_constraints(X,auxdata)
-[hbm,problem,Xprev,step] = deal(auxdata{:});
+function f = hbm_arclength_constraints(X,hbm,problem,Xprev,step)
 Xscale = problem.Xscale;
 x = X(1:end-2).*Xscale(1:end-2);
 w = X(end-1).*Xscale(end-1);
@@ -829,8 +804,7 @@ c(end+1) = resonance_condition(hbm,problem,w,x,A);
 f = [c;
      norm(Xcurr -Xprev) - step];
       
-function J = hbm_arclength_jacobian(X,auxdata)
-[hbm,problem,Xprev,step] = deal(auxdata{:});
+function J = hbm_arclength_jacobian(X,hbm,problem,Xprev,step)
 Xscale = problem.Xscale;
 Xcurr = X;
 

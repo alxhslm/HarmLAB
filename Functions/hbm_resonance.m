@@ -20,10 +20,9 @@ if isfield(problem,'xhscale')
     problem.wscale = w0;
     problem.Xscale = [problem.xscale; problem.wscale];
 else
-    problem = update_scaling(problem,hbm,x0,w0);
+    problem = hbm_scaling(problem,hbm,x0,w0);
 end
 
-problem.Fscale = [problem.Fscale; ones(problem.constr.N,1)];
 problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 
 X0 = [x0; w0]./problem.Xscale;
@@ -33,14 +32,13 @@ iter = 0;
 hbm.max_iter = 4;
 bSuccess = false;
 Jstr = [hbm.sparsity ones(NDof*NComp,1)];
-Jstr = [Jstr; ones(problem.constr.N,size(Jstr,2))];
 
-obj0 = hbm_obj(X0,hbm,problem,A);
-G0 = hbm_grad(X0,hbm,problem,A);
-J0 = hbm_jacobian(X0,hbm,problem,A);
-F0 = hbm_constr(X0,hbm,problem,A);
-
-dHdw0 = G0(end) - G0(1:end-1)*(J0(:,1:end-1)\J0(:,end));
+% obj0 = hbm_obj(X0,hbm,problem,A);
+% G0 = hbm_grad(X0,hbm,problem,A);
+% J0 = hbm_jacobian(X0,hbm,problem,A);
+% F0 = hbm_constr(X0,hbm,problem,A);
+% 
+% dHdw0 = G0(end) - G0(1:end-1)*(J0(:,1:end-1)\J0(:,end));
 
 constr_tol = 1E-6;
 opt_tol = 1E-6;
@@ -59,10 +57,10 @@ while ~bSuccess && iter < hbm.max_iter
             options.jacobianstructure  = Jstr;
             options.jacobian  = @hbm_jacobian;
             options.gradient = @hbm_grad;
-            options.ipopt.print_level = 5;
-            options.ipopt.max_iter = maxit;
-            options.ipopt.tol = opt_tol;
-            options.ipopt.constr_viol_tol = constr_tol;
+            options.print_level = 5;
+            options.max_iter = maxit;
+            options.tol = opt_tol;
+            options.constr_viol_tol = constr_tol;
             [X, info] = fipopt(@hbm_obj,X0,@hbm_constr,options,hbm,problem,A);           
             bSuccess = any(info.status == [0 1]);
     end
@@ -73,12 +71,12 @@ if ~bSuccess
     X = X + NaN;
 end
 
-obj = hbm_obj(X,hbm,problem,A);
-G = hbm_grad(X,hbm,problem,A);
-J = hbm_jacobian(X,hbm,problem,A);
-F = hbm_constr(X,hbm,problem,A);
-
-dHdw = G(end) - G(1:end-1)*(J(:,1:end-1)\J(:,end));
+% obj = hbm_obj(X,hbm,problem,A);
+% G = hbm_grad(X,hbm,problem,A);
+% J = hbm_jacobian(X,hbm,problem,A);
+% F = hbm_constr(X,hbm,problem,A);
+% 
+% dHdw = G(end) - G(1:end-1)*(J(:,1:end-1)\J(:,end));
 
 w0 = abs(X(end).*problem.wscale);
 x = X(1:end-1).*problem.xscale;
@@ -97,18 +95,6 @@ sol.F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
 
 %floquet multipliers
 sol.L = floquetMultipliers(hbm,problem,w,u,x);
-
-function problem = update_scaling(problem,hbm,x,w0)
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-xdc  = max(abs(X(1,:)),1E-6);
-xharm = repmat(max(abs(X(2:end,:)),[],1),hbm.harm.NFreq-1,1);
-xharm = max(xharm,1E-6);
-xscale = [xdc; xharm*(1+1i)];
-problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
-problem.Fscale = x*0+1;
-problem.wscale = w0;
-problem.Xscale = [problem.xscale; problem.wscale];
-problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 
 function obj = hbm_obj(X,hbm,problem,A)
 x = X(1:end-1).*problem.xscale;
