@@ -119,7 +119,8 @@ for o = 1:length(command)
                             Jx = [ Jxx   Jxa;
                                 Jax   Jaa];
                         case 'sum'
-                            theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NDof,NDof,1);
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
+                            
                             Jx = zeros(NComp*NDof);
                             Jx(1:NDof,1:NDof) = mean(dfhbm_dxhbm,3);
                             for l = 1:(NFreq-1)
@@ -160,7 +161,8 @@ for o = 1:length(command)
                             Jau = catmat(hbm.nonlin.alg.Ju.*dfalg_du(:,ijacobu,:),1);
                             Ju = [Jxu; Jau];
                         case 'sum'
-                            theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NDof,NDof,1);
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
+                            
                             Ju = zeros(NComp*NInput);
                             Ju(1:NInput,1:NInput) = mean(dfhbm_du,3);
                             for l = 1:(NFreq-1)
@@ -204,7 +206,7 @@ for o = 1:length(command)
                              Jxdot = [Jxx Jxa;
                                  Jax Jaa];
                          case 'sum'
-                             theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NDof,NDof,1);
+                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                              
                              Jxdot = zeros(NComp*NDof);
                              for l = 1:(NFreq-1)
@@ -243,7 +245,7 @@ for o = 1:length(command)
                             Jau = catmat(hbm.nonlin.alg.Judot{1}.*dfalg_dudot(:,ijacobu,:),1);
                             Judot = [Jxu; Jau];
                         case 'sum'
-                            theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NDof,NDof,1);
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
                             Judot = zeros(NComp*NDof,NComp*NInput);
                             for l = 1:(NFreq-1)
@@ -285,7 +287,7 @@ for o = 1:length(command)
                             Jxddot = [Jxx Jxa;
                                         Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
                             Jxddot = zeros(NDof*NComp);
                             for l = 1:(NFreq-1)
@@ -327,7 +329,7 @@ for o = 1:length(command)
                             Juddot = [Jxx Jxa;
                                         Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
                             Juddot = zeros(NDof*NComp);
                             for l = 1:(NFreq-1)
@@ -370,7 +372,7 @@ for o = 1:length(command)
                             D1 = [Jxx Jxa;
                                   Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
                             D1 = zeros(NDof*NComp);
                             D1(1:NDof,1:NDof) = mean(dfhbm_dxdot,3);
@@ -415,7 +417,7 @@ for o = 1:length(command)
                             D1 = [Jxx Jxa;
                                   Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NDof,NDof,1);
                             
                             D1 = zeros(NDof*NComp);
                             for l = 1:(NFreq-1)
@@ -458,7 +460,7 @@ for o = 1:length(command)
                             D2 = [Jxx Jxa;
                                   Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
                             D2 = zeros(NDof*NComp);
                             D2(1:NDof,1:NDof) = mean(dfhbm_dxddot,3);
@@ -487,6 +489,3 @@ for o = 1:length(command)
            
     end
 end
-
-function [cl, sl] = cosAndSin(ph)
-cl = cos(ph); sl = sin(ph);

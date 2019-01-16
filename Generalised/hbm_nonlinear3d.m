@@ -146,16 +146,16 @@ for o = 1:length(command)
                             Jx = zeros(NComp*NDof);
                             Jx(1:NDof,1:NDof) = mean(dfhbm_dxhbm,3);
                             for l = 1:(NFreq-1)
-                                [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                 Jx(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum( (dfhbm_dxhbm.*cl)/(Nfft(1)*Nfft(2)),3);
                                 Jx(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum(-(dfhbm_dxhbm.*sl)/(Nfft(1)*Nfft(2)),3);
                             end
                             for k = 1:(NFreq-1)
-                                [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                 Jx((2*k-1)*NDof+(1:NDof),1:NDof) =  2*sum(dfhbm_dxhbm.*ck/(Nfft(1)*Nfft(2)),3);
                                 Jx((2*k-0)*NDof+(1:NDof),1:NDof) = -2*sum(dfhbm_dxhbm.*sk/(Nfft(1)*Nfft(2)),3);
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Jx((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum( (dfhbm_dxhbm.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Jx((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum(-(dfhbm_dxhbm.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Jx((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum( (dfhbm_dxhbm.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -193,16 +193,16 @@ for o = 1:length(command)
                             Ju = zeros(NComp*NDof,NComp*NInput);
                             Ju(1:NDof,1:NInput) = mean(dfhbm_du,3);
                             for l = 1:(NFreq-1)
-                                [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                 Ju(1:NDof,(2*l-1)*NInput+(1:NInput)) =  sum( (dfhbm_du.*cl)/(Nfft(1)*Nfft(2)),3);
                                 Ju(1:NDof,(2*l-0)*NInput+(1:NInput)) =  sum(-(dfhbm_du.*sl)/(Nfft(1)*Nfft(2)),3);
                             end
                             for k = 1:(NFreq-1)
-                                [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                 Ju((2*k-1)*NDof+(1:NDof),1:NInput) =  2*sum(dfhbm_du.*ck/(Nfft(1)*Nfft(2)),3);
                                 Ju((2*k-0)*NDof+(1:NDof),1:NInput) = -2*sum(dfhbm_du.*sk/(Nfft(1)*Nfft(2)),3);
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Ju((2*k-1)*NDof+(1:NDof),(2*l-1)*NInput+(1:NInput)) =  2*sum( (dfhbm_du.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Ju((2*k-1)*NDof+(1:NDof),(2*l-0)*NInput+(1:NInput)) =  2*sum(-(dfhbm_du.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Ju((2*k-0)*NDof+(1:NDof),(2*l-1)*NInput+(1:NInput)) = -2*sum( (dfhbm_du.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -245,14 +245,14 @@ for o = 1:length(command)
                             Jxdot = repmat({zeros(NDof*NComp)},1,2);
                             for n = 1:2
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Jxdot{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxdot.*sl)/(Nfft(1)*Nfft(2)),3);
                                     Jxdot{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxdot.*cl)/(Nfft(1)*Nfft(2)),3);
                                 end
                                 for k = 1:(NFreq-1)
-                                    [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                    [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                     for l = 1:(NFreq-1)
-                                        [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                        [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                         Jxdot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((- kHarm(l+1,n)*dfhbm_dxdot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Jxdot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((- kHarm(l+1,n)*dfhbm_dxdot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Jxdot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((- kHarm(l+1,n)*dfhbm_dxdot.*sl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -293,14 +293,14 @@ for o = 1:length(command)
                             Judot = repmat({zeros(NComp*NDof,NComp*NInput)},1,2);
                             for n = 1:2
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Judot{n}(1:NDof,(2*l-1)*NInput+(1:NInput)) =  sum((-l*dfhbm_dudot.*sl)/(Nfft(1)*Nfft(2)),3);
                                     Judot{n}(1:NDof,(2*l-0)*NInput+(1:NInput)) =  sum((-l*dfhbm_dudot.*cl)/(Nfft(1)*Nfft(2)),3);
                                 end
                                 for k = 1:(NFreq-1)
-                                    [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                    [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                     for l = 1:(NFreq-1)
-                                        [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                        [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                         Judot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NInput+(1:NInput)) =  2*sum((- kHarm(l+1,n)*dfhbm_dudot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Judot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NInput+(1:NInput)) =  2*sum((- kHarm(l+1,n)*dfhbm_dudot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Judot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NInput+(1:NInput)) = -2*sum((- kHarm(l+1,n)*dfhbm_dudot.*sl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -344,14 +344,14 @@ for o = 1:length(command)
                             Jxddot = repmat({zeros(NDof*NComp)},1,2);
                             for n = 1:2
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Jxddot{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)^2*dfhbm_dxddot.*cl)/(Nfft(1)*Nfft(2)),3);
                                     Jxddot{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum(( kHarm(l+1,n)^2*dfhbm_dxddot.*sl)/(Nfft(1)*Nfft(2)),3);
                                 end
                                 for k = 1:(NFreq-1)
-                                    [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                    [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                     for l = 1:(NFreq-1)
-                                        [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                        [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                         Jxddot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((- kHarm(l+1,n)^2*dfhbm_dxddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Jxddot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((  kHarm(l+1,n)^2*dfhbm_dxddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Jxddot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((- kHarm(l+1,n)^2*dfhbm_dxddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -363,14 +363,14 @@ for o = 1:length(command)
                             
                             n = 3;
                             for l = 1:(NFreq-1)
-                                [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                 Jxddot{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-prod(kHarm(l+1,:))*dfhbm_dxddot.*cl)/(Nfft(1)*Nfft(2)),3);
                                 Jxddot{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum(( prod(kHarm(l+1,:))*dfhbm_dxddot.*sl)/(Nfft(1)*Nfft(2)),3);
                             end
                             for k = 1:(NFreq-1)
-                                [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Jxddot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((- prod(kHarm(l+1,:))*dfhbm_dxddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Jxddot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((  prod(kHarm(l+1,:))*dfhbm_dxddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Jxddot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((- prod(kHarm(l+1,:))*dfhbm_dxddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -412,14 +412,14 @@ for o = 1:length(command)
                             Juddot = repmat({zeros(NDof*NComp)},1,2);
                             for n = 1:2
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Juddot{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)^2*dfhbm_duddot.*cl)/(Nfft(1)*Nfft(2)),3);
                                     Juddot{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum(( kHarm(l+1,n)^2*dfhbm_duddot.*sl)/(Nfft(1)*Nfft(2)),3);
                                 end
                                 for k = 1:(NFreq-1)
-                                    [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                    [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                     for l = 1:(NFreq-1)
-                                        [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                        [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                         Juddot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((- kHarm(l+1,n)^2*dfhbm_duddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Juddot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((  kHarm(l+1,n)^2*dfhbm_duddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                         Juddot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((- kHarm(l+1,n)^2*dfhbm_duddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -430,14 +430,14 @@ for o = 1:length(command)
                             end
                             n = 3;
                             for l = 1:(NFreq-1)
-                                [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                 Juddot{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-prod(kHarm(l+1,:))*dfhbm_duddot.*cl)/(Nfft(1)*Nfft(2)),3);
                                 Juddot{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum(( prod(kHarm(l+1,:))*dfhbm_duddot.*sl)/(Nfft(1)*Nfft(2)),3);
                             end
                             for k = 1:(NFreq-1)
-                                [ck,sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                [ck,sk] = cosAndSin(kHarm(k+1,1)*theta(1,:,:) + kHarm(k+1,2)*theta(2,:,:));
                                 for l = 1:(NFreq-1)
-                                    [cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
+                                    [cl,sl] = cosAndSin(kHarm(l+1,1)*theta(1,:,:) + kHarm(l+1,2)*theta(2,:,:));
                                     Juddot{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((- prod(kHarm(l+1,:))*dfhbm_duddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Juddot{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((  prod(kHarm(l+1,:))*dfhbm_duddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
                                     Juddot{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((- prod(kHarm(l+1,:))*dfhbm_duddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
@@ -467,25 +467,30 @@ for o = 1:length(command)
                             D1 = [Jxx Jxa;
                                   Jax Jaa];
                         case 'sum'
-                            theta = 2*pi/Nfft*(0:(Nfft-1));
+                            theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
+                            theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
+                            [theta1,theta2] = ndgrid(theta1,theta2);
+                            theta1 = permute(theta1(:)',[1 3 2]);
+                            theta2 = permute(theta2(:)',[1 3 2]);
+                            theta = [theta1;theta2];
                             
                             D1 = zeros(NDof*NComp);
                             D1(1:NDof,1:NDof) = mean(dfhbm_dxdot,3);
                             for l = 1:(NFreq-1)
-                                [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                D1(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum(( dfhbm_dxdot.*cl)/Nfft,3);
-                                D1(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-dfhbm_dxdot.*sl)/Nfft,3);
+                                [cl, sl] = cosAndSin(mtimesx(kHarm(l+1,:),theta));
+                                D1(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum(( dfhbm_dxdot.*cl)/(Nfft(1)*Nfft(2)),3);
+                                D1(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-dfhbm_dxdot.*sl)/(Nfft(1)*Nfft(2)),3);
                             end
                             for k = 1:(NFreq-1)
-                                [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
-                                D1((2*k-1)*NDof+(1:NDof),1:NDof) =  2*sum(dfhbm_dxdot.*ck/Nfft,3);
-                                D1((2*k-0)*NDof+(1:NDof),1:NDof) = -2*sum(dfhbm_dxdot.*sk/Nfft,3);
+                                [ck, sk] = cosAndSin(mtimesx(kHarm(k+1,:),theta));
+                                D1((2*k-1)*NDof+(1:NDof),1:NDof) =  2*sum(dfhbm_dxdot.*ck/(Nfft(1)*Nfft(2)),3);
+                                D1((2*k-0)*NDof+(1:NDof),1:NDof) = -2*sum(dfhbm_dxdot.*sk/(Nfft(1)*Nfft(2)),3);
                                 for l = 1:(NFreq-1)
                                     [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                    D1((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum(( dfhbm_dxdot.*cl).*ck/Nfft,3);
-                                    D1((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-dfhbm_dxdot.*sl).*ck/Nfft,3);
-                                    D1((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum(( dfhbm_dxdot.*cl).*sk/Nfft,3);
-                                    D1((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-dfhbm_dxdot.*sl).*sk/Nfft,3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum(( dfhbm_dxdot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-dfhbm_dxdot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum(( dfhbm_dxdot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-dfhbm_dxdot.*sl).*sk/(Nfft(1)*Nfft(2)),3);
                                 end
                             end
                     end
@@ -524,18 +529,18 @@ for o = 1:length(command)
                             for n = 1:2
                                 D1{n} = zeros(NDof*NComp);
                                 for l = 1:(NFreq-1)
-                                    [cl, sl] = cosAndSin(kHarm(l+1,:)*theta);
-                                    D1{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl)/Nfft,3);
-                                    D1{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl)/Nfft,3);
+                                    [cl, sl] = cosAndSin(mtimesx(kHarm(l+1,:),theta));
+                                    D1{n}(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl)/(Nfft(1)*Nfft(2)),3);
+                                    D1{n}(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl)/(Nfft(1)*Nfft(2)),3);
                                 end
                                 for k = 1:(NFreq-1)
-                                    [ck, sk] = cosAndSin(kHarm(k+1,:)*theta);
+                                    [ck, sk] = cosAndSin(mtimesx(kHarm(k+1,:),theta));
                                     for l = 1:(NFreq-1)
                                         [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                        D1{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl).*ck/Nfft,3);
-                                        D1{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl).*ck/Nfft,3);
-                                        D1{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl).*sk/Nfft,3);
-                                        D1{n}((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl).*sk/Nfft,3);
+                                        D1{n}((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
+                                        D1{n}((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
+                                        D1{n}((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*sl).*sk/(Nfft(1)*Nfft(2)),3);
+                                        D1{n}((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-kHarm(l+1,n)*dfhbm_dxddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
                                     end
                                 end
                                 D1{n} = D1{n}(iRetain,iRetain);
@@ -564,25 +569,31 @@ for o = 1:length(command)
                            D2 = [Jxx Jxa;
                                Jax Jaa];
                        case 'sum'
-                           theta = 2*pi/Nfft*(0:(Nfft-1));
+                           theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
+                           theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
+                           [theta1,theta2] = ndgrid(theta1,theta2);
+                           theta1 = permute(theta1(:)',[1 3 2]);
+                           theta2 = permute(theta2(:)',[1 3 2]);
+                           theta = [theta1;theta2];
+                            
                            D2 = zeros(NDof*NComp);
                            
                            D2(1:NDof,1:NDof) = mean(dfhbm_dxddot,3);
                            for l = 1:(NFreq-1)
-                               [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                               D2(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum(( dfhbm_dxddot.*cl)/Nfft,3);
-                               D2(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-dfhbm_dxddot.*sl)/Nfft,3);
+                               [cl, sl] = cosAndSin(mtimesx(kHarm(l+1,:),theta));
+                               D2(1:NDof,(2*l-1)*NDof+(1:NDof)) =  sum(( dfhbm_dxddot.*cl)/(Nfft(1)*Nfft(2)),3);
+                               D2(1:NDof,(2*l-0)*NDof+(1:NDof)) =  sum((-dfhbm_dxddot.*sl)/(Nfft(1)*Nfft(2)),3);
                            end
                            for k = 1:(NFreq-1)
-                               [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
-                               D2((2*k-1)*NDof+(1:NDof),1:NDof) =  2*sum(dfhbm_dxddot.*ck/Nfft,3);
-                               D2((2*k-0)*NDof+(1:NDof),1:NDof) = -2*sum(dfhbm_dxddot.*sk/Nfft,3);
+                               [ck, sk] = cosAndSin(mtimesx(kHarm(k+1,:),theta));
+                               D2((2*k-1)*NDof+(1:NDof),1:NDof) =  2*sum(dfhbm_dxddot.*ck/(Nfft(1)*Nfft(2)),3);
+                               D2((2*k-0)*NDof+(1:NDof),1:NDof) = -2*sum(dfhbm_dxddot.*sk/(Nfft(1)*Nfft(2)),3);
                                for l = 1:(NFreq-1)
-                                   [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                   D2((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum(( dfhbm_dxddot.*cl).*ck/Nfft,3);
-                                   D2((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-dfhbm_dxddot.*sl).*ck/Nfft,3);
-                                   D2((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum(( dfhbm_dxddot.*cl).*sk/Nfft,3);
-                                   D2((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-dfhbm_dxddot.*sl).*sk/Nfft,3);
+                                   [cl, sl] = cosAndSin(mtimesx(kHarm(l+1,:),theta));
+                                   D2((2*k-1)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) =  2*sum(( dfhbm_dxddot.*cl).*ck/(Nfft(1)*Nfft(2)),3);
+                                   D2((2*k-1)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) =  2*sum((-dfhbm_dxddot.*sl).*ck/(Nfft(1)*Nfft(2)),3);
+                                   D2((2*k-0)*NDof+(1:NDof),(2*l-1)*NDof+(1:NDof)) = -2*sum(( dfhbm_dxddot.*cl).*sk/(Nfft(1)*Nfft(2)),3);
+                                   D2((2*k-0)*NDof+(1:NDof),(2*l-0)*NDof+(1:NDof)) = -2*sum((-dfhbm_dxddot.*sl).*sk/(Nfft(1)*Nfft(2)),3);
                                end
                            end
                            
@@ -593,6 +604,3 @@ for o = 1:length(command)
             varargout{o} = D2;
     end
 end
-
-function [cl, sl] = cosAndSin(ph)
-[cl,sl] = cosAndSin(kHarm(l+1,:)*theta);
