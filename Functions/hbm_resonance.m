@@ -99,6 +99,8 @@ sol.A = A;
 f = hbm_output3d(hbm,problem,w,u,x);
 sol.F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
 
+sol.H = hbm_objective('complex',hbm,problem,w,x,u);
+
 %floquet multipliers
 sol.L = floquetMultipliers(hbm,problem,w,u,x);
 

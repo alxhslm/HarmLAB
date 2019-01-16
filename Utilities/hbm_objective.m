@@ -1,12 +1,24 @@
 function varargout = hbm_objective(part,hbm,problem,w0,x,u)
 
 NDof = problem.NDof;
+if strcmp(problem.res.input,'fe')
+    NInput = NDof;
+else
+    NInput = problem.NInput;
+end
+
 if problem.res.iHarm > 1
     iRe = problem.res.iDof + 2*(problem.res.iHarm - 2)*NDof + NDof;
     iIm = problem.res.iDof + 2*(problem.res.iHarm - 2)*NDof + 2*NDof;
+    
+    jRe = problem.res.iInput + 2*(problem.res.iHarm - 2)*NInput + NInput;
+    jIm = problem.res.iInput + 2*(problem.res.iHarm - 2)*NInput + 2*NInput;
 else
     iRe = problem.res.iDof;
     iIm = [];
+    
+    jRe = problem.res.iInput;
+    jIm = [];
 end
 
 W = w0(1)/hbm.harm.rFreqRatio(1);
@@ -30,10 +42,9 @@ switch problem.res.output
         Fnl = W^2*Wx*Wx*x;
 end
 
+Fb = Fnl(iRe);
 if ~isempty(iIm)
-    Fb = sqrt(Fnl(iRe)^2 + Fnl(iIm).^2);
-else
-    Fb = Fnl(iRe);
+    Fb = Fb + 1i*Fnl(iIm);
 end
 
 %% input
@@ -49,16 +60,15 @@ switch problem.res.input
         Fex = Ju*u -  hbm.lin.b;
     case 'u'
         Fex = u;
-    case 'xdot'
+    case 'udot'
         Fex = W * Wu*u;
-    case 'xddot'
+    case 'uddot'
         Fex = W^2 * Wu*Wu*u;
 end
 
-if ~isempty(iIm)
-    Fe = sqrt(Fex(iRe)^2 + Fex(iIm).^2);
-else
-    Fe = Fex(iRe);
+Fe = Fex(jRe);
+if ~isempty(jIm)
+    Fe = Fe + 1i*Fex(jIm);
 end
 
 if ~iscell(part)
@@ -68,8 +78,11 @@ varargout = cell(1,length(part));
 
 for i = 1:length(part)
     switch part{i}
-        case 'func'
+        case 'complex'
             H = Fb./Fe;
+            varargout{i} = H;
+        case 'func'
+            H = abs(Fb./Fe);
             varargout{i} = H;
         case 'jacobX'
             
@@ -88,16 +101,16 @@ for i = 1:length(part)
             end
             
             if ~isempty(iIm)
-                dFbdx = (Fnl(iRe)*Jx(iRe,:) + Fnl(iIm)*Jx(iIm,:))./(Fb + eps);
+                dFbdx = (Fnl(iRe)*Jx(iRe,:) + Fnl(iIm)*Jx(iIm,:))./(abs(Fb) + eps);
             else
-                dFbdx = (Fnl(iRe)*Jx(iRe,:))./(Fb + eps);
+                dFbdx = (Fnl(iRe)*Jx(iRe,:))./(abs(Fb) + eps);
             end
             
             %excitation
             dFedx = 0;
             
             %put it all together
-            dHdx = (dFbdx.*Fe - Fb.*dFedx)./Fe.^2;
+            dHdx = (dFbdx.*abs(Fe) - abs(Fb).*dFedx)./abs(Fe).^2;
             
             varargout{i} = dHdx;
         case 'derivW'
@@ -124,9 +137,9 @@ for i = 1:length(part)
                     Dw_nl = 2*W*(Wx*Wx*x);
             end
             if ~isempty(iIm)
-                dFbdw = (Fnl(iRe)*Dw_nl(iRe) + Fnl(iIm)*Dw_nl(iIm))./(Fb + eps);
+                dFbdw = (Fnl(iRe)*Dw_nl(iRe) + Fnl(iIm)*Dw_nl(iIm))./(abs(Fb) + eps);
             else
-                dFbdw = (Fnl(iRe)*Dw_nl(iRe))./(Fb + eps);
+                dFbdw = (Fnl(iRe)*Dw_nl(iRe))./(abs(Fb) + eps);
             end
             
             %excitation
@@ -146,12 +159,12 @@ for i = 1:length(part)
                     Dw_u = 2*W*(Wu*Wu*u);
             end
             if ~isempty(iIm)
-                dFedw = (Fex(iRe)*Dw_u(iRe) + Fex(iIm)*Dw_u(iIm))./Fe;
+                dFedw = (Fex(jRe)*Dw_u(jRe) + Fex(jIm)*Dw_u(jIm))./abs(Fe);
             else
-                dFedw = (Fex(iRe)*Dw_u(iRe))./Fe;
+                dFedw = (Fex(jRe)*Dw_u(jRe))./abs(Fe);
             end
             
-            dHdw = (dFbdw.*Fe - Fb.*dFedw)./Fe.^2;
+            dHdw = (dFbdw.*abs(Fe) - abs(Fb).*dFedw)./abs(Fe).^2;
             
             varargout{i} = dHdw;
     end

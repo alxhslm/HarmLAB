@@ -131,6 +131,15 @@ if ~isfield(problem,'iGroup')
     problem.iGroup = ones(problem.NDof,1);
 end
 
+if isfield(problem,'res')
+    f = {'input','output','iInput','iOutput','iHarm'};
+
+    if ~isfield(problem,f{i})
+        error('Missing field %s from resonance condition',f{i})
+    end
+
+end
+
 function harm = setupGroups(problem,harm)
 %asign each DOF to a group
 for i = 1:length(harm.group)

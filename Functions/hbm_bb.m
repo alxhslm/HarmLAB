@@ -486,10 +486,9 @@ F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
 if ~exist('h','var')
     h = 0*w;
     for i = 1:NPts
-        h(i) = hbm_objective('func',hbm,problem,w(i)*hbm.harm.rFreqRatio,x(:,i),u(:,i));
+        h(i) = hbm_objective('complex',hbm,problem,w(i)*hbm.harm.rFreqRatio,x(:,i),u(:,i));
     end
 end
-
 
 for i = 1:NPts
     w0 = w(i)*hbm.harm.rFreqRatio;
