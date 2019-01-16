@@ -66,7 +66,6 @@ function options = setupOptions(options)
 if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
 if ~isfield(options,'bUseStandardHBM'), options.bUseStandardHBM = 0; end
 if ~isfield(options,'solver'), options.solver = 'ipopt'; end
-if ~isfield(options,'cont_method'), options.cont_method = 'pseudo'; end
 options = default_missing(options,{'aft_method','jacob_method'},{'mat','mat'});
 
 function dependence = setupDependence(dependence)
@@ -77,16 +76,14 @@ scaling = default_missing(scaling,{'method','tol'},{'max',1E-6});
 
 
 function cont = setupCont(cont)
-cont = default_missing(cont,{'bUpdate','step0','min_step','max_step','ftol','xtol','c', 'C','maxfail','num_iter_increase','num_iter_reduce'},{true,1E-3, 1E-6, 5E-3, 1E-6,1E-6,0.5, 1.05,4,10,3});
+cont = default_missing(cont,{'method','bUpdate','step0','min_step','max_step','ftol','xtol','c', 'C','maxfail','num_iter_increase','num_iter_reduce'},{'predcorr',true,1E-3, 1E-6, 5E-3, 1E-6,1E-6,0.5, 1.05,4,10,3});
 
-if ~isfield(cont,'pseudo'), cont.pseudo = struct(); end
-cont.pseudo = default_missing(cont.pseudo,{'bMoorePenrose','maxit'},{true, 30});
+if ~isfield(cont,'predcorr'), cont.predcorr = struct(); end
+cont.predcorr = default_missing(cont.predcorr,{'predictor','corrector','bMoorePenrose','solver','maxit'},{'linear','pseudo',true,'ipopt',30});
 
 if ~isfield(cont,'coco'), cont.coco = struct(); end
 cont.coco = default_missing(cont.coco,{'ItMX','NPR'},{2E4,5});
 
-if ~isfield(cont,'arclength'), cont.arclength = struct(); end
-cont.arclength = default_missing(cont.arclength,{'maxit','solver'},{30,'ipopt'});
 
 function problem = setupProblem(problem)
 if ~isfield(problem,'name')

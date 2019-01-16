@@ -40,7 +40,7 @@ problem.wEnd = wEnd;
 
 err = 'success';
 
-switch hbm.options.cont_method
+switch hbm.cont.method
     case 'none'
         w = w0;
         x = x0;
@@ -70,10 +70,7 @@ switch hbm.options.cont_method
         end
         hbm_frf_plot('close',hbm,problem,[],[],[],[]);
         debug = struct();
-    case 'pseudo'
-        fun_constr   = @(X)hbm_pseudo_constraints(X,hbm,problem,A);
-        fun_jacobian = @(X)hbm_pseudo_jacobian(X,hbm,problem,A);
-        
+    case 'predcorr'              
         w = w0; wCurr = w0;
         x = x0; xCurr = x0;
         u = u0; uCurr = u0;
@@ -81,7 +78,6 @@ switch hbm.options.cont_method
         s = []; sCorrCurr = []; sPredCurr = [];
         it = []; itCurr = [];
         flag = {};
-%         lambda = lambda0;
         
         Xprev = [x0; w0]./problem.Xscale;
 
@@ -91,6 +87,30 @@ switch hbm.options.cont_method
         num_iter_tot = 0;
         
         step = hbm.cont.step0;
+        
+        switch hbm.cont.predcorr.corrector
+            case 'pseudo'
+            case 'arclength'
+                Jstr = [hbm.sparsity 0*x0+1;
+                            0*x0'+1 1];
+                switch hbm.cont.predcorr.solver
+                    case 'ipopt'
+                        ipopt_opt.print_level = 0;
+                        ipopt_opt.maxit = hbm.cont.predcorr.maxit;
+                        ipopt_opt.ftol = hbm.cont.ftol;
+                        ipopt_opt.xtol = hbm.cont.xtol;
+                        ipopt_opt.jacob = @hbm_arclength_jacobian;
+                        ipopt_opt.jacobstructure = Jstr;
+                    case 'fsolve'
+                        fsolve_opt = optimoptions('fsolve',...
+                            'Display','off',...
+                            'TolFun',hbm.cont.ftol,...
+                            'TolX',hbm.cont.xtol,...
+                            'Jacobian','on',...
+                            'JacobPattern',Jstr,...
+                            'MaxIter',hbm.cont.predcorr.maxit);
+                end
+        end
         
         hbm_frf_plot('init',hbm,problem,x,w,A);
         fprintf('STEP    PRED    CORR   STATUS  INFO  ITER   TOT   FREQ       ')
@@ -111,46 +131,81 @@ switch hbm.options.cont_method
         
         while norm(Xprev - Xend) > hbm.cont.max_step
             
-            if length(w) < 5
-                %linear
-                X = Xprev + step*tangent_prev;
-            else
-                %cubic
-                X = polynomial_predictor(Xsol(:,end-3:end),tsol(:,end-3:end),step);
+            %predictor
+            switch hbm.cont.predcorr.predictor
+                case 'linear'
+                    Xpred = Xprev + step*tangent_prev;
+                case 'quadratic'
+                    if length(w) < 5
+                        Xpred = Xprev + step*tangent_prev;
+                    else
+                    	Xpred = polynomial_predictor(Xsol(:,end-2:end),tsol(:,end-2:end),step);
+                    end
+                case 'cubic'
+                    if length(w) < 5
+                        Xpred = Xprev + step*tangent_prev;
+                    else
+                    	Xpred = polynomial_predictor(Xsol(:,end-3:end),tsol(:,end-3:end),step);
+                    end
             end
             num_iter = 0;
-            Xlast = X + Inf;
+            Xlast = Xpred + Inf;
             tangent = tangent_prev;
             
-            while (any(abs(X - Xlast) > hbm.cont.xtol) || any(abs(F) > hbm.cont.ftol)) && num_iter <= hbm.cont.pseudo.maxit
-                Xlast = X;
-                J = hbm_pseudo_jacobian(X,hbm,problem,A);
-                F = hbm_pseudo_constraints(X,hbm,problem,A);
-                if hbm.cont.pseudo.bMoorePenrose
-                    X = Xlast - J\F;
-                else
-                    B = [J; tangent'];
-                    R = [J*tangent; 0];
-                    Q = [F; 0];
-                    W = tangent - B\R;
-                    tangent = normalise(W);
-                    X = Xlast - B\Q;
-                end
-                num_iter = num_iter + 1;
+            %corrector
+            switch hbm.cont.predcorr.corrector
+                case 'pseudo'
+                    bConverged = 0;
+                    X = Xpred;
+                    while num_iter <= hbm.cont.predcorr.maxit
+                        Xlast = X;
+                        J = hbm_pseudo_jacobian(X,hbm,problem,A);
+                        F = hbm_pseudo_constraints(X,hbm,problem,A);
+                        if hbm.cont.predcorr.bMoorePenrose
+                            X = Xlast - J\F;
+                        else
+                            B = [J; tangent'];
+                            R = [J*tangent; 0];
+                            Q = [F; 0];
+                            W = tangent - B\R;
+                            tangent = normalise(W);
+                            X = Xlast - B\Q;
+                        end
+                        num_iter = num_iter + 1;
+                        if ~(any(abs(X - Xlast) > hbm.cont.xtol) || any(abs(F) > hbm.cont.ftol))
+                            bConverged = 1;
+                            break;
+                        end
+                    end
+                    if hbm.cont.predcorr.bMoorePenrose
+                        tangent = pseudo_null(J);
+                        tangent = sign(tangent'*tangent_prev)*tangent;
+                    end
+                case 'arclength'
+                    switch hbm.cont.predcorr.solver
+                        case 'ipopt'
+                            [X,info] = fipopt('',Xpred,@hbm_arclength_constraints,ipopt_opt,hbm,problem,A,Xprev,tangent_prev,step);
+                            num_iter = info.iter;
+                            bConverged = info.status == 0;
+                            F = hbm_arclength_constraints(X,hbm,problem,A,Xprev,tangent_prev,step);
+                        case 'fsolve'
+                            [X,F,status,out] = fsolve(@hbm_arclength_constraints,Xpred,fsolve_opt,hbm,problem,A,Xprev,tangent_prev,step);
+                            num_iter = out.iterations + 1;
+                            bConverged = status == 1;
+                    end
+                    J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step);
+                    tangent = pseudo_null(J(1:end-1,:));
+                    tangent = sign(tangent'*tangent_prev)*tangent;
             end
+            
 %             X(end) = abs(X(end));
             
             num_step = num_step + 1;
             num_iter_tot = num_iter_tot + num_iter;
-            
-            if hbm.cont.pseudo.bMoorePenrose
-                tangent = pseudo_null(J);
-                tangent = sign(tangent'*tangent_prev)*tangent;
-            end
-            
-            if tangent(end) > 0
+
+%             if tangent(end) > 0
 %                  1
-            end
+%             end
             
             %prepare for plots
             XCurr(:,end+1) = X;
@@ -163,7 +218,7 @@ switch hbm.options.cont_method
             sPredCurr(end+1) = step;
             itCurr(end+1) = num_iter;
             
-            if num_iter <= hbm.cont.pseudo.maxit && sCorrCurr(end) >= hbm.cont.min_step && sCorrCurr(end) <= hbm.cont.max_step && wCurr(end) > 0
+            if bConverged && sCorrCurr(end) >= hbm.cont.min_step && sCorrCurr(end) <= hbm.cont.max_step && wCurr(end) > 0
                 %sucess
                 status = 'S';
                 hbm_frf_plot('data',hbm,problem,xCurr(:,end),wCurr(end),A);
@@ -212,7 +267,7 @@ switch hbm.options.cont_method
                     %gone to negative frequencies (somehow)
                     flag{end+1} = 'Failed: Negative frequency';
                     info = 'Neg';
-                elseif num_iter <= hbm.cont.pseudo.maxit
+                elseif num_iter <= hbm.cont.predcorr.maxit
                     %converge but step size is unacceptable
                     if sCorrCurr(end) < 0
                         %backwards
@@ -293,176 +348,6 @@ switch hbm.options.cont_method
             'sPred',sPredCurr,...
             'it',itCurr,...
             'flag',flag);
-    case 'arclength'
-        w = w0; wCurr = w0;
-        x = x0; xCurr = x0;
-        u = u0; uCurr = u0;
-        f = f0; fCurr = f0;
-        s = []; sCorrCurr = []; sPredCurr = [];
-        it = []; itCurr = [];
-        flag = {};
-%         lambda = lambda0;
-        
-        problem = hbm_scaling(problem,hbm,x0,w0);
-        Xprev = [x0; w0]./problem.Xscale;
-        Xend = [xEnd;wEnd]./problem.Xscale;
-        step = hbm.cont.step0;
-        num_iter_tot = 0;
-        
-        XCurr = Xprev;
-        
-        hbm_frf_plot('init',hbm,problem,x,w,A);
-        fprintf('STEP LAB    PAR(1)         ')
-        fprintf('U(%d)          ',1:length(x0))
-        fprintf('\n')
-        fprintf('%3d %3d  %+0.5e   ',0,1,w)
-        fprintf('%+0.5e   ',x)
-        fprintf('\n')
-        
-        Jstr = [hbm.sparsity 0*x0+1;
-                0*x0'+1 1];
-        
-        switch hbm.cont.arclength.solver
-            case 'ipopt'
-                ipopt_opt.print_level = 0;
-                ipopt_opt.maxit = hbm.cont.arclength.maxit;
-                ipopt_opt.ftol = hbm.cont.ftol;
-                ipopt_opt.xtol = hbm.cont.xtol;
-                ipopt_opt.jacob = @hbm_arclength_jacobian;
-                ipopt_opt.jacobstructure = Jstr;
-            case 'fsolve'
-                fsolve_opt = optimoptions('fsolve',...
-                                            'Display','off',...
-                                            'TolFun',hbm.cont.ftol,...
-                                            'TolX',hbm.cont.xtol,...
-                                            'Jacobian','on',...
-                                            'JacobPattern',Jstr,...
-                                            'MaxIter',hbm.cont.arclength.maxit);
-        end
-        
-        tangent_prev = 0*Xprev; tangent_prev(end) = sign(wEnd-w0);
-        F = hbm_arclength_constraints(Xprev,hbm,problem,A,Xprev,tangent_prev,step);
-        J = hbm_arclength_jacobian(Xprev,hbm,problem,A,Xprev,tangent_prev,step);
-        tangent_prev = pseudo_null(J(1:end-1,:));
-        tangent_prev = tangent_prev * sign(tangent_prev(end)) * sign(wEnd - w0);
-        
-        while norm(Xprev - Xend) > hbm.cont.max_step
-            bConverged = 0;
-            num_fail = 0;
-            
-            while ~bConverged               
-                if length(wCurr) < 6
-                    %linear
-                    X0 = Xprev + step*tangent_prev;
-                else
-                    %cubic
-                    X0 = polynomial_predictor(Xsol(:,end-3:end),[],step);
-                end
-                
-                switch hbm.cont.arclength.solver
-                    case 'ipopt'
-                        [X,info] = fipopt([],X0,@hbm_arclength_constraints,ipopt,hbm,problem,A,Xprev,tangent_prev,step);
-                        iter = info.iter;
-                        bConverged = info.status == 0;
-                        F = hbm_arclength_constraints(X,hbm,problem,A,Xprev,tangent_prev,step);
-                    case 'fsolve'
-                        [X,F,status,out] = fsolve(@hbm_arclength_constraints,X0,fsolve_opt,hbm,problem,A,Xprev,tangent_prev,step);
-                        iter = out.iterations + 1;
-                        bConverged = status == 1;
-                end
-                num_iter_tot = num_iter_tot + iter;
-                
-                %prepare for plots
-                XCurr(:,end+1) = X;
-                wCurr(end+1) = X(end).*problem.wscale;
-                xCurr(:,end+1) = X(1:end-1).*problem.xscale;
-                uCurr(:,end+1) = packdof(A*feval(problem.excite,hbm,problem,wCurr(end)*hbm.harm.rFreqRatio));
-                fCurr(:,end+1) = hbm_output3d(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
-                sCorrCurr(end+1) = norm(X - Xprev);
-                sPredCurr(end+1) = step;
-                itCurr(end+1) = iter;
-                
-                if bConverged
-                    if sCorrCurr(end) > hbm.cont.max_step
-                        %too large step
-                        step = 0.9 * step * hbm.cont.max_step / sCorrCurr(end);
-                        flag{end+1} = 'Step too large';
-                    elseif sCorrCurr(end) < hbm.cont.min_step
-                        step = 1.1 * step * hbm.cont.min_step / sCorrCurr(end);
-                        flag{end+1} = 'Step too small';
-                    else
-                        %just right
-                        if iter <= hbm.cont.num_iter_increase
-                            step = min(step * hbm.cont.C, step * hbm.cont.max_step / sCorrCurr(end));
-                            flag{end+1} = 'Increasing step size';
-                        elseif iter >= hbm.cont.num_iter_reduce
-                            step = step / hbm.cont.C;
-                            flag{end+1} = 'Reducing step size';
-                        else
-                            flag{end+1} = 'Success';
-                        end
-
-                        J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step);
-                        hz = null(J(1:end-1,:));
-                        tangent = sign(hz'*tangent_prev)*hz;
-                        tangent = tangent .* problem.Xscale;
-                        
-%                         %floquet multipliers
-%                         lambda(:,end+1) = floquetMultipliers(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
-                        
-                        %store the data
-                        w(end+1) = wCurr(end);
-                        x(:,end+1) = xCurr(:,end);
-                        u(:,end+1) = uCurr(:,end);
-                        f(:,end+1) = fCurr(:,end);
-                        s(end+1) = sCorrCurr(end);
-                        
-                        problem = hbm_scaling(problem,hbm,x(:,end),w(end));
-
-                        Xprev = [x(:,end); w(end)]./ problem.Xscale;
-                        tangent_prev = tangent ./ problem.Xscale;
-                        Xsol = [x;w]./(repmat(problem.Xscale,1,size(x,2))); 
-                        
-                        hbm_frf_plot('data',hbm,problem,xCurr(:,end),wCurr(end),A);
-                        
-                        fprintf('%3d %3d  %+0.5e   ',num_iter_tot,length(w),w(end))
-                        fprintf('%+0.5e   ',x(:,end))
-                        fprintf('\n')
-                    end
-                else
-                    %failed
-                    flag{end+1} = 'Failed';
-                    step = step*hbm.cont.c;
-                    hbm_frf_plot('err',hbm,problem,xCurr(:,end),wCurr(end),A);
-                    num_fail = num_fail + 1;
-                    if num_fail > 4
-                        break;
-                    end
-                end
-                drawnow
-            end
-        end
-
-        %add on final point
-        XCurr(:,end+1) = Xend;
-        wCurr(end+1)   = wEnd;
-        xCurr(:,end+1) = xEnd;
-        uCurr(:,end+1) = packdof(A*feval(problem.excite,hbm,problem,wCurr(end)*hbm.harm.rFreqRatio));
-        fCurr(:,end+1) = hbm_output3d(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
-        sCorrCurr(end+1) = norm(Xend - Xprev);
-        sPredCurr(end+1) = norm(Xend - Xprev);
-        flag{end+1} = 'Success';
-        itCurr(end+1) = 0;
-
-        hbm_frf_plot('close',hbm,problem,[],[],[],[]);
-        debug = struct('x',xCurr,...
-            'u',uCurr,...
-            'f',fCurr,...
-            'w',wCurr,...
-            'sCorr',sCorrCurr,...
-            'sPred',sPredCurr,...
-            'it',itCurr,...
-            'flag',flag);
     case 'coco'
         rng('shuffle')
         currdir = pwd;
@@ -483,7 +368,7 @@ switch hbm.options.cont_method
         prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
         prob = coco_set(prob,'ep','bifus',false);
         bd = coco(prob, name, [], 1, 'w', [wMin wMax]./problem.wscale);
-        hbm_frf_plot('close',hbm,problem,[],[],[],[]);
+        hbm_frf_plot('close',hbm,problem,[],[],[]);
         
         %extract the solutions
         lab_col = coco_bd_col(bd, 'TYPE');
@@ -496,13 +381,17 @@ switch hbm.options.cont_method
             w(i) = chart.x(end);
         end
         w = w .* problem.wscale;
-        x = x .* (xscale*(0*w+1));
+        x = x .* (problem.xscale*(0*w+1));
         fclose all;
         try
             rmdir(['data' filesep name],'s')
         end
         cd(currdir);
         debug = struct();
+        %TODO: extract the paramaters from coco
+        s = 0*w;
+        it = 0*w;
+        err = 'success';
 end
 
 X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
