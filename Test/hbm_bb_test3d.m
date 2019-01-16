@@ -1,40 +1,49 @@
 function hbm_bb_test3d
 problem = test_params;
+
 P = problem.P;
 
 hbm.harm.rFreqRatio = 1;
-hbm.harm.NHarm = 1;
-hbm.harm.Nfft = 16;
+hbm.harm.NHarm = 2;
+hbm.harm.Nfft = 32;
+
+hbm.options.bUseStandardHBM = true;
+hbm.dependence.x = true;
+hbm.dependence.xdot  = true;
+hbm.dependence.w = false;
+
+hbm.scaling.tol = 1;
+
+hbm.cont.step0 = 1E-2;
+hbm.cont.max_step = 1E-1;
+hbm.cont.min_step = 1E-6;
+
+
 if 1
     hbm.harm.rFreqRatio(end+1) = 1.376;
     hbm.harm.NHarm(end+1) = 2;
     hbm.harm.Nfft(end+1) = 16;
-        hbm.harm.kHarm = [0 0;
-                          1 0;
-                          0 1;
-                          0 2];
 end
 
-hbm.cont.step0  = 1;
-hbm.cont.min_step = 0.1;
-hbm.cont.max_step = 100;
-hbm.cont.maxit = 100;
-
-hbm.options.disp_dependence = true;
-hbm.options.vel_dependence  = true;
-hbm.options.freq_dependence = false;
-
-hbm.options.cont_method = 'pseudo';
+hbm.options.bAnalyticalDerivs = true;
+hbm.cont.method = 'predcorr';
+hbm.cont.predcorr.corrector = 'pseudo';
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'mat';
 
-hbm.options.bAnalyticalDerivs = false;
-hbm = setuphbm(hbm,problem);
+problem.res.iDof = P.iDof;
+problem.res.iInput = P.iInput;
+problem.res.iHarm = 2;
+problem.res.sign = 1;
+problem.res.output = 'x';
+problem.res.input = 'u';
+
+[hbm,problem] = setuphbm(hbm,problem);
 
 iMode = 1;
 omega = sqrt(eig(problem.K,problem.M));
 w0 = max(omega(iMode)-2,0.5);
-wEnd = omega(iMode)+1.5;
+wEnd = omega(iMode)+2;
 
 figure
 ax(1) = subplot(2,1,1);
@@ -47,14 +56,21 @@ ylabel('\angle F (deg)');
 linkaxes(ax,'x')
 xlim([w0,wEnd]);
 
-for A = [1 2 3]
-    file = ['FRF_' sprintf('A = %0.1f',A) '.mat'];
+As = [1 3 10 30];
+
+for i = 1:length(As)
+    file = [fileparts(which(mfilename)) filesep 'FRF_' sprintf('A = %0.1f',As(i)) '.mat'];
     if ~isfile(file)
-        [x,w,u] = hbm_frf(hbm,problem,w0,wEnd,A,[]);
-        save(file,'x','w','u')
+        results = hbm_frf(hbm,problem,As(i),w0,[],wEnd,[]);
+        save(file,'-struct','results');
     else
-        load(file)
+        results = load(file);
     end
+
+    x = results.X;
+    u = results.U;
+    w = results.w;
+    
     X = permute((x(2,:,:)),[2 3 1]);
     U = permute((u(2,:,:)),[2 3 1]);
     H = X(P.iDof,:)./U(P.iInput,:);
@@ -62,26 +78,21 @@ for A = [1 2 3]
     plot(ax(2),w,unwrap(angle(H),[],2));
     
     [~,ii] = max(H);
-    [Xres,wres,Ures] = hbm_resonance(hbm,problem,w(ii),A,x(:,:,ii));
-    Xres = permute((Xres(2,:,:)),[2 3 1]);
-    Ures = permute((Ures(2,:,:)),[2 3 1]);
-    Hres = Xres(P.iDof,:)./Ures(P.iInput,:);
-    plot(ax(1),wres,abs(Hres),'o')
-    plot(ax(2),wres,angle(Hres),'o')
+    sol = hbm_resonance(hbm,problem,w(ii),As(i),x(:,:,ii));
+    Xres(:,:,i) = sol.X;
+    wres(i) = sol.w0;
+    plot(ax(1),sol.w0,abs(sol.H),'o')
+    plot(ax(2),sol.w0,angle(sol.H),'o')
     drawnow
 end
 
 bb = hbm;
-bb.options.cont_method = 'none';
+bb.cont.method = 'none';
 
+A0 = As(1);     w0 = wres(1);     X0 = Xres(:,:,1);
+Aend = As(end); wEnd = wres(end); XEnd = Xres(:,:,end);
 tic;
-A0 = 1;
-Aend = 3;
-vomit
-[X_bb,w_bb,~,U_bb] = hbm_bb(bb,problem,A0,Aend,omega(iMode),[]);
-X_bb = permute(X_bb(2,:,:),[2 3 1]);
-U_bb = permute(U_bb(2,:,:),[2 3 1]);
-H_bb = X_bb(P.iDof,:)./U_bb(P.iInput,:);
+sol = hbm_bb(bb,problem,A0,w0,X0,Aend,wEnd,XEnd);
 toc;
-plot(ax(1),w_bb,abs(H_bb));
-plot(ax(2),w_bb,unwrap(angle(H_bb),[],2));
+plot(ax(1),sol.w,abs(sol.H));
+plot(ax(2),sol.w,unwrap(angle(abs(sol.H)),[],2));

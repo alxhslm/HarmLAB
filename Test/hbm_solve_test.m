@@ -1,18 +1,16 @@
 function hbm_solve_test
 problem = test_params;
 NDof = problem.NDof;
-NAlg = problem.NAlg;
 
 hbm.harm.NHarm = 2;
 hbm.harm.Nfft = 32;
 
 hbm.options.bUseStandardHBM = true;
-hbm.options.disp_dependence = true;
-hbm.options.vel_dependence  = true;
-hbm.options.freq_dependence = false;
+hbm.dependence.x = true;
+hbm.dependence.xdot  = true;
+hbm.dependence.w = false;
 
 hbm.options.bAnalyticalDerivs = true;
-hbm.options.cont_method = 'coco';
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'mat';
 
@@ -20,73 +18,57 @@ omega = sqrt(eig(problem.K,problem.M));
 w0 = 4;
 A = 100;
 
-hbm = setuphbm(hbm,problem);
+[hbm,problem] = setuphbm(hbm,problem);
 
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'mat';
 hbm = setuphbm(hbm,problem);
 tic;
-[X1,xAlg1,U,F] = hbm_solve(hbm,problem,w0,A,[]);
-[t1,x1,xdot1] = get_time_series(hbm,w0,X1);
+sol1 = hbm_solve(hbm,problem,w0,A,[]);
+[t1,x1,xdot1] = get_time_series(hbm,w0,sol1.X);
 tRun(1) = toc;
 
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'sum';
 hbm = setuphbm(hbm,problem);
 tic;
-x0 = [packdof(X1);reshape(xAlg1,1,[])'];
-[X2,xAlg2,U,F] = hbm_solve(hbm,problem,w0,A,x0);
-[t2,x2,xdot2] = get_time_series(hbm,w0,X2);
+sol2 = hbm_solve(hbm,problem,w0,A,sol1.X);
+[t2,x2,xdot2] = get_time_series(hbm,w0,sol2.X);
 tRun(2) = toc;
 
 hbm.options.aft_method = 'fft';
 hbm.options.jacob_method = 'mat';
 hbm = setuphbm(hbm,problem);
 tic;
-x0 = [packdof(X2);reshape(xAlg2,1,[])'];
-[X3,xAlg3,U,F] = hbm_solve(hbm,problem,w0,A,x0);
-[t3,x3,xdot3] = get_time_series(hbm,w0,X3);
+sol3 = hbm_solve(hbm,problem,w0,A,sol2.X);
+[t3,x3,xdot3] = get_time_series(hbm,w0,sol3.X);
 tRun(3) = toc;
 
 hbm.options.aft_method = 'fft';
 hbm.options.jacob_method = 'sum';
 hbm = setuphbm(hbm,problem);
 tic;
-x0 = [packdof(X3);reshape(xAlg3,1,[])'];
-[X4,xAlg4,U,F] = hbm_solve(hbm,problem,w0,A,x0);
-[t4,x4,xdot4] = get_time_series(hbm,w0,X4);
+sol4 = hbm_solve(hbm,problem,w0,A,sol3.X);
+[t4,x4,xdot4] = get_time_series(hbm,w0,sol4.X);
 tRun(4) = toc;
 
 tic;
-y0 = [x4(1,:) xdot4(1,:) xAlg4(1,:)];
-fun = @(t,y)test_odefun(t,y,w0,U,hbm,problem);
-M = blkdiag(eye(NDof),problem.M,zeros(NAlg));
+y0 = [x4(1,:) xdot4(1,:)];
+fun = @(t,y)test_odefun(t,y,w0,sol1.U,hbm,problem);
+M = blkdiag(eye(NDof),problem.M);
 options = odeset('Mass',M,'Vectorized','on','MassSingular','yes','RelTol',1E-12,'AbsTol',1E-12);
 [t5,y] = ode15s(fun,[t4(1) t4(end)],y0,options);
 tRun(5) = toc;
 
 x5 = y(:,1:NDof);
 xdot5 = y(:,NDof+(1:NDof));
-xAlg5 = y(:,2*NDof+(1:NAlg));
-% for i = 1:size(x2,1)
-%     xInt(i,1) = fsolve(@(z)getnthoutput(2,2,@force,P,x2(i,:)',z),0,optimoptions('fsolve','Display','off'));
-% end
-% x2 = [x2 xInt];
-% xdot2 = [xdot2, adiff(t2,xInt,1)];
-% toc;
 
 figure
-subplot(3,2,1)
+subplot(2,2,1)
 plot(t1,x1(:,1:NDof)','-',t2,x2(:,1:NDof)','-',t3,x3(:,1:NDof)','-',t4,x4(:,1:NDof)','-',t5,x5(:,1:NDof)','o-');
 ylabel('x');
 
-if problem.NAlg>0
-    subplot(3,2,3)
-    plot(t1,xAlg1','-',t2,xAlg2','-',t3,xAlg3','-',t4,xAlg4','-',t5,xAlg5','o-');
-    ylabel('x_{alg}');
-end
-
-subplot(3,2,5)
+subplot(2,2,3)
 plot(t1,xdot1(:,1:NDof)','-',t2,xdot2(:,1:NDof)','-',t3,xdot3(:,1:NDof)','-',t4,xdot4(:,1:NDof)','-',t5,xdot5(:,1:NDof)','o-');
 ylabel('xdot');
 xlabel('Time (s)');
