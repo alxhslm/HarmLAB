@@ -3,15 +3,20 @@ NDof = problem.NDof;
 
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w0,A,x0);
+x0 = packdof(sol.X,hbm.harm.iRetain);
 if any(isnan(abs(x0(:))))
     error('Failed to solve initial problem')
 end
-x0 = packdof(sol.X,hbm.harm.iRetain);
 u0 = packdof(sol.U);
 f0 = packdof(sol.F);
 
 sol = hbm_solve(hbm,problem,wEnd,A,xEnd);
 xEnd = packdof(sol.X,hbm.harm.iRetain);
+if any(isnan(abs(xEnd(:))))
+    error('Failed to solve final problem')
+end
+uEnd = packdof(sol.U);
+fEnd = packdof(sol.F);
 
 hbm.bIncludeNL = 1;
 
@@ -42,34 +47,72 @@ err = 'success';
 
 switch hbm.cont.method
     case 'none'
+        hbm_frf_plot('init',hbm,problem,x0,w0,A);
         w = w0;
         x = x0;
-        s = [];
-        it = [];
-        hbm_frf_plot('init',hbm,problem,hbm.cont.step0,x,w,A);
+        u = u0;
+        
+        wscale = mean([w0 wEnd]);
+        
+        hbm_frf_plot('data',hbm,problem,x0,w0,A);
         step = hbm.cont.step0;
+        direction = sign(wEnd-w0)*wscale;
+        
         while  w(end) >= wMin && w(end) <= wMax
-            if ~any(isnan(x(:,end)))
-                x0 = x(:,end);
-            end
-            wCurr = w(end) + step*problem.wscale*sign(wEnd-w0);
-            X = hbm_solve(hbm,problem,wCurr,A,unpackdof(x0,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain));
-            if any(isnan(X))
-                err = {'failed to solve'};
+            wpred = w(end) + step*direction;
+            if wpred > wMax || wpred < wMin
                 break;
             end
-            if bUpdateScaling
-                problem.x0scale = abs(X(1,:));
-                problem.xhscale = max(abs(X(2:end,:)),[],1);
+            
+            iPredict = max(length(w)-6,1):length(w);
+            if length(iPredict) > 1
+                xpred = interp1(w(iPredict),x(:,iPredict)',wpred,'pchip','extrap')';
+            else
+                xpred = x;
             end
-            x(:,end+1) = packdof(X);
-            w(end+1) = wCurr;
-            s(end+1) = step;
-            it(end+1) = 1;
-            hbm_frf_plot('data',hbm,problem,x(:,end),w(end),A);
+ 
+            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+            sol = hbm_solve(hbm,problem,wpred,A,Xpred);
+            
+            %unpack outputs           
+            xsol = packdof(sol.X);
+            usol = packdof(sol.U);
+            wsol = sol.w0;
+            
+            if ~any(isnan(xsol))
+                step = min(max(step * hbm.cont.C,hbm.cont.min_step),hbm.cont.max_step);
+                x(:,end+1) = xsol;
+                u(:,end+1) = usol;
+                w(end+1) = wsol;
+                hbm_frf_plot('data',hbm,problem,xsol,wsol,A);
+                num_err = 0;
+                if w(end) >= wMax || w(end) <= wMin
+                    break;
+                end
+            else
+                step = step * hbm.cont.c;
+                num_err = num_err + 1;
+                hbm_frf_plot('err',hbm,problem,xsol,wsol,A);
+                if num_err > hbm.cont.maxfail
+                    err = 'Too many failed iterations';
+                    break;
+                end
+            end
         end
-        hbm_frf_plot('close',hbm,problem,[],[],[],[]);
+        if num_err > hbm.cont.maxfail
+            x(:,end+1) = NaN;
+            u(:,end+1) = NaN;
+            w(end+1)   = NaN;
+        else
+            x(:,end+1) = xEnd;
+            u(:,end+1) = uEnd;
+            w(end+1)   = wEnd;
+        end
+        hbm_frf_plot('close',hbm,problem,[],[],[]);
+        
         debug = struct();
+        s = 0*w;
+        it = 0*w;
     case 'predcorr'              
         w = w0; wCurr = w0;
         x = x0; xCurr = x0;
@@ -119,12 +162,12 @@ switch hbm.cont.method
         fprintf('%+5.2e  ',x)
         fprintf('\n')       
         
+        Xprev = [x0; w0]./problem.Xscale;
         F = hbm_pseudo_constraints(Xprev,hbm,problem,A);
         J = hbm_pseudo_jacobian(Xprev,hbm,problem,A);
         tangent_prev = pseudo_null(J);
         tangent_prev = tangent_prev * sign(tangent_prev(end)) * sign(wEnd - w0);
         t0 = tangent_prev.*problem.Xscale;
-        XCurr = Xprev;
         t = t0; tCurr = t0;
         Xend = [xEnd;wEnd]./problem.Xscale;
         
@@ -196,18 +239,11 @@ switch hbm.cont.method
                     tangent = pseudo_null(J(1:end-1,:));
                     tangent = sign(tangent'*tangent_prev)*tangent;
             end
-            
-%             X(end) = abs(X(end));
-            
+
             num_step = num_step + 1;
             num_iter_tot = num_iter_tot + num_iter;
 
-%             if tangent(end) > 0
-%                  1
-%             end
-            
             %prepare for plots
-            XCurr(:,end+1) = X;
             wCurr(end+1) = X(end).*problem.wscale;
             xCurr(:,end+1) = X(1:end-1).*problem.xscale;
             tCurr(:,end+1) = tangent.*problem.Xscale;
@@ -239,11 +275,10 @@ switch hbm.cont.method
                 w(end+1)   = wCurr(end);
                 x(:,end+1) = xCurr(:,end);
                 u(:,end+1) = uCurr(:,end);
-                f(:,end+1) = fCurr(:,end);
                 t(:,end+1) = tCurr(:,end);
+                f(:,end+1) = fCurr(:,end);
                 s(end+1)   = sCorrCurr(end);
                 it(end+1)  = itCurr(end);
-%                 lambda(:,end+1) = floquetMultipliers(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
                 
                 if bUpdateScaling
                     problem = hbm_scaling(problem,hbm,x(:,end),w(end));
@@ -283,6 +318,10 @@ switch hbm.cont.method
                         step = min(1.1 * sPredCurr(end) * hbm.cont.min_step / sCorrCurr(end),hbm.cont.max_step);
                         flag{end+1} = 'Failed: Step too small';
                         info = 'Sml';
+                    else
+                        step = max(step * hbm.cont.c,hbm.cont.min_step);
+                        flag{end+1} = 'Failed: Other error';
+                        info = 'Oth';
                     end
                 else
                     %failed to converge
@@ -315,20 +354,15 @@ switch hbm.cont.method
         end
         
         %add on final point
-        XCurr(:,end+1) = Xend;
         wCurr(end+1)   = wEnd;
         xCurr(:,end+1) = xEnd;
-        tCurr(:,end+1) = tCurr(:,end);
-        uCurr(:,end+1) = packdof(A*feval(problem.excite,hbm,problem,wCurr(end)*hbm.harm.rFreqRatio));
-        fCurr(:,end+1) = hbm_output3d(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
+        uCurr(:,end+1) = uEnd;
+        fCurr(:,end+1) = fEnd;
         sCorrCurr(end+1) = norm(Xend - Xprev);
         sPredCurr(end+1) = norm(Xend - Xprev);
         flag{end+1} = 'Success';
         itCurr(end+1) = 0;
         
-%         %floquet multipliers
-%         lambda(:,end+1) = floquetMultipliers(hbm,problem,wCurr(end)*hbm.harm.rFreqRatio,uCurr(:,end),xCurr(:,end));
-
         %store the data
         w(end+1)   = wCurr(end);
         x(:,end+1) = xCurr(:,end);
@@ -358,7 +392,7 @@ switch hbm.cont.method
         data.hbm = hbm;
         data.problem = problem;
         data.A = A;
-        
+
         prob = coco_prob();
         prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', [x0(:); w0]./problem.Xscale);
         prob = coco_add_pars(prob, 'pars', length(x0)+1, 'w');
@@ -386,8 +420,8 @@ switch hbm.cont.method
             rmdir(['data' filesep name],'s')
         end
         cd(currdir);
-        debug = struct();
         %TODO: extract the paramaters from coco
+        debug = struct();
         s = 0*w;
         it = 0*w;
         err = 'success';
