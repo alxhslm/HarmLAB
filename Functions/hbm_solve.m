@@ -47,7 +47,7 @@ while ~bSuccess && iter < hbm.max_iter
              bSuccess = ~info;
         case 'fsolve'
              fun_constr = @(x)hbm_constraints(x,hbm,problem,w0,u);
-             options = optimoptions('fsolve','Display','iter');
+             options = optimoptions('fsolve','Display','iter','SpecifyObjectiveGradient',true);
              [X,~,EXITFLAG] = fsolve(fun_constr,X0,options);
              bSuccess = EXITFLAG == 1;
         case 'ipopt'
@@ -84,12 +84,15 @@ sol.A = A;
 %floquet multipliers
 sol.L = floquetMultipliers(hbm,problem,w,u,x);
 
-function c = hbm_constraints(X,hbm,problem,w0,u)
+function [c,J] = hbm_constraints(X,hbm,problem,w0,u)
 %unpack the inputs
 x = X.*problem.xscale;
-w0 = w0*hbm.harm.rFreqRatio;
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
+w = w0*hbm.harm.rFreqRatio;
+c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
+if nargout > 1
+    J = hbm_jacobian(X,hbm,problem,w0,u);
+end
 
 function J = hbm_jacobian(X,hbm,problem,w0,u)
 %unpack the inputs

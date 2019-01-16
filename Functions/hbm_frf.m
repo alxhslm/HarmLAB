@@ -104,11 +104,10 @@ switch hbm.cont.method
                     case 'fsolve'
                         fsolve_opt = optimoptions('fsolve',...
                             'Display','off',...
-                            'TolFun',hbm.cont.ftol,...
-                            'TolX',hbm.cont.xtol,...
-                            'Jacobian','on',...
-                            'JacobPattern',Jstr,...
-                            'MaxIter',hbm.cont.predcorr.maxit);
+                            'FunctionTolerance',hbm.cont.ftol,...
+                            'StepTolerance',hbm.cont.xtol,...
+                            'SpecifyObjectiveGradient',true,...
+                            'MaxIterations',hbm.cont.predcorr.maxit);
                 end
         end
         
@@ -539,12 +538,7 @@ f = [c;
     s - step];
 
 if nargout > 1
-    Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-    Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-    
-    J = [Jx Dw];
-    J = J .*problem.Jscale;
-    J(end+1,:) = sgn*((X - Xprev)'+eps)/(1*(norm(X - Xprev)+eps)); %length(X)
+    J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step);
 end
 
 function J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step)

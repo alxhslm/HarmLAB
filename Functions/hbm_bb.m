@@ -240,6 +240,29 @@ switch hbm.cont.method
         num_iter_tot = 0;
         flag = {};
         
+        switch hbm.cont.predcorr.corrector
+            case 'pseudo'
+            case 'arclength'
+                Jstr = [hbm.sparsity 0*x0+1;
+                            0*x0'+1 1];
+                switch hbm.cont.predcorr.solver
+                    case 'ipopt'
+                        ipopt_opt.print_level = 0;
+                        ipopt_opt.maxit = hbm.cont.predcorr.maxit;
+                        ipopt_opt.ftol = hbm.cont.ftol;
+                        ipopt_opt.xtol = hbm.cont.xtol;
+                        ipopt_opt.jacob = @hbm_arclength_jacobian;
+                        ipopt_opt.jacobstructure = Jstr;
+                    case 'fsolve'
+                        fsolve_opt = optimoptions('fsolve',...
+                            'Display','off',...
+                            'FunctionTolerance',hbm.cont.ftol,...
+                            'StepTolerance',hbm.cont.xtol,...
+                            'SpecifyObjectiveGradient',true,...
+                            'MaxIterations',hbm.cont.predcorr.maxit);
+                end
+        end
+        
         tangent_prev = pseudo_null(J0);
         tangent_prev = tangent_prev * sign(tangent_prev(end)) * sign(AEnd - A0);
         t0 = tangent_prev.*problem.Xscale;
@@ -301,7 +324,7 @@ switch hbm.cont.method
                             [X,info] = fipopt('',Xpred,@hbm_arclength_constraints,ipopt_opt,hbm,problem,Xprev,tangent_prev,step);
                             num_iter = info.iter;
                             bConverged = info.status == 0;
-                            F = hbm_arclength_constraints(X,hbm,problem,A,Xprev,tangent_prev,step);
+                            F = hbm_arclength_constraints(X,hbm,problem,Xprev,tangent_prev,step);
                         case 'fsolve'
                             [X,F,status,out] = fsolve(@hbm_arclength_constraints,Xpred,fsolve_opt,hbm,problem,Xprev,tangent_prev,step);
                             num_iter = out.iterations + 1;
@@ -714,13 +737,14 @@ J = J .* repmat(Xscale(:)',size(J,1),1);
 
 %% Arclength files
 
-function f = hbm_arclength_constraints(X,hbm,problem,Xprev,tangent_prev,step)
+function [f,J] = hbm_arclength_constraints(X,hbm,problem,Xprev,tangent_prev,step)
 Xscale = problem.Xscale;
+Xcurr = X;
+
 x = X(1:end-2).*Xscale(1:end-2);
 w = X(end-1).*Xscale(end-1);
 w0 = w * hbm.harm.rFreqRatio;
 A = X(end).*Xscale(end);
-Xcurr = X;
 
 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
 U = A*feval(problem.excite,hbm,problem,w0);
@@ -728,13 +752,17 @@ u = packdof(U);
 
 c = hbm_balance3d('func',hbm,problem,w0,u,x);
 
-sgn = sign((X - Xprev)' * tangent_prev);
-s = norm(X - Xprev) * sgn;
+sgn = sign((Xcurr - Xprev)' * tangent_prev);
+s = norm(Xcurr - Xprev) * sgn;
 
-c(end+1) = resonance_condition(hbm,problem,w,x,A);
+c(end+1) = resonance_condition(hbm,problem,w0,x,A);
 
 f = [c;
      s - step];
+      
+if nargout > 1
+    J = hbm_arclength_jacobian(Xcurr,hbm,problem,Xprev,tangent_prev,step);
+end
       
 function J = hbm_arclength_jacobian(X,hbm,problem,Xprev,tangent_prev,step)
 Xscale = problem.Xscale;
@@ -749,8 +777,7 @@ X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-sgn = sign((X - Xprev)' * tangent_prev);
-
+sgn = sign((Xcurr - Xprev)' * tangent_prev);
 
 Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
 Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
