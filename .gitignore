@@ -1,2 +1,4 @@
 *.MATLABDriveTag
 *.asv
+*.mat
+*.bak
