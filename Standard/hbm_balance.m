@@ -1,5 +1,5 @@
 function varargout = hbm_balance(command,hbm,problem,w0,u,x)
-NDofTot = hbm.harm.NComp*problem.NDof + problem.NAlg*prod(hbm.harm.Nfft);
+NDofTot = hbm.harm.NComp*problem.NDof;
 
 %TODO: this assumes fNL(x,xdot). Extend to case fNL(x,xdot,xddot);
 

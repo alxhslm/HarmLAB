@@ -46,7 +46,6 @@ problem.model = @test_model;
 problem.excite = @test_excite;
 problem.obj = @test_obj;
 problem.NDof = 2;
-problem.NAlg = 0;
 problem.NInput = 1;
 problem.NOutput = 2;
 problem.P = P;

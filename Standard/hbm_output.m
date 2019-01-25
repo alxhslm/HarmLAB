@@ -12,11 +12,10 @@ w = kHarm*rBase*w0;
 t = (0:(Nfft-1))/Nfft*2*pi/(rBase*w0);
 
 %now compute the fourier coefficients for xdot, xddot
-X = unpackdof(x(1:NRetain),NFreq-1,problem.NDof,iRetain);
+X = unpackdof(x,NFreq-1,problem.NDof,iRetain);
 Wx = repmat(1i*w,1,size(X,2));
 Xdot  = X.*Wx;
 Xddot = Xdot.*Wx;
-xalg   = reshape(x(NRetain+1:end,:),problem.NAlg,prod(Nfft))';
 
 %convert to time domain
 x      = freq2time(X,NFreq-1,Nfft);
@@ -33,7 +32,7 @@ udot  = freq2time(Udot,NFreq-1,Nfft);
 uddot = freq2time(Uddot,NFreq-1,Nfft);
 
 %push through the nl system
-o = feval(problem.model,'output',t, x.',xdot.',xddot.',u.',udot.',uddot.',xalg.',hbm,problem,w0).';
+o = feval(problem.model,'output',t, x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0).';
 
 %finally convert into a fourier series
 O = time2freq(o,NFreq-1,Nfft);

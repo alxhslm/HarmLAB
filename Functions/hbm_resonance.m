@@ -1,6 +1,5 @@
 function sol = hbm_resonance(hbm,problem,w0,A,xIn)
 NDof = problem.NDof;
-NAlg = problem.NAlg;
 Nfft  = hbm.harm.Nfft;
 
 %setup the problem for IPOPT
@@ -80,8 +79,7 @@ w0 = abs(X(end).*problem.wscale);
 w = w0*hbm.harm.rFreqRatio;
 x = X(1:end-1).*problem.xscale;
 
-sol.X = unpackdof(x(1:Nhbm),hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
-sol.xalg = squeeze(permute(reshape(x(Nhbm+1:end,:),NAlg,Nfft(1),Nfft(2)),[2 3 1]));
+sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
 
 sol.w0 = w0;
 sol.w = w;

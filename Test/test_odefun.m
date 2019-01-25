@@ -18,17 +18,14 @@ uddot = sum(real(ampddot .* ph) ,3);
 %extract x and xdot
 NDof = problem.NDof;
 x = y(1:NDof,:); 
-xdot = y(NDof+1:2*NDof,:);
-xalg = y(2*NDof+1:end,:);
+xdot = y(NDof+1:end,:);
 
 Fe = problem.Ku*u + problem.Cu*udot + problem.Mu*uddot;
 Fl = -problem.C*xdot - problem.K*x;
-Fnl  = -test_model('nl' ,t,x,xdot,0*xdot,u,udot,uddot,xalg,hbm,problem,w0);
-Falg =  test_model('alg',t,x,xdot,0*xdot,u,udot,uddot,xalg,hbm,problem,w0);
+Fnl  = -test_model('nl' ,t,x,xdot,0*xdot,u,udot,uddot,hbm,problem,w0);
 
 Ftot = Fl + Fnl + Fe;
 
 %finally assemble the xdot vector
 Mydot = [xdot;
-         Ftot;
-         Falg];
+         Ftot];

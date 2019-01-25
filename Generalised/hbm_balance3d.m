@@ -3,7 +3,7 @@ if hbm.options.bUseStandardHBM
     [varargout{1:nargout}] = hbm_balance(command,hbm,problem,w0(1),u,x);
     return;
 end
-NDofTot = hbm.harm.NRetain + problem.NAlg*prod(hbm.harm.Nfft);
+NDofTot = hbm.harm.NRetain;
 
 %TODO: this assumes fNL(x,xdot). Extend to case fNL(x,xdot,xddot);
 

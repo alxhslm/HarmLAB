@@ -1,4 +1,4 @@
-function varargout = get_time_series3d(hbm,w0,X,xalg,tspan)
+function varargout = get_time_series3d(hbm,w0,X,tspan)
 if hbm.options.bUseStandardHBM
     [varargout{1:nargout}] = get_time_series(hbm,problem,w0,u,X);
     return;
@@ -73,9 +73,6 @@ if ti(end) > 2*pi/w0(1)% && hbm.harm.NHarm(1)>0
             xddot = repmat(xddot,N,1);
         end
     end
-    if nargin > 3 && ~isempty(xalg)
-        xalg = repmat(xalg,N,1);
-    end
 end
 if ti(end) > 2*pi/w0(2)% && hbm.harm.NHarm(2)>0
     N = ceil(ti(end)/t2(1,end));
@@ -91,9 +88,6 @@ if ti(end) > 2*pi/w0(2)% && hbm.harm.NHarm(2)>0
             xddot = repmat(xddot,1,N);
         end
     end
-    if nargin > 3 && ~isempty(xalg)
-        xalg = repmat(xalg,1,N);
-    end
 end
 
 if Nfft(2) > 1
@@ -106,11 +100,6 @@ if Nfft(2) > 1
             end
         end
     end
-    if nargin > 3 && ~isempty(xalg)
-        for i = 1:size(xalg,3)
-            xalgi(:,i) = interp2(t2,t1,xalg(:,:,i),ti,ti);
-        end
-    end
 else
     for i = 1:size(x,3)
         xi(:,i) = interp1(t1,x(:,:,i),ti);
@@ -119,11 +108,6 @@ else
             if nargout > 3
                 xddoti(:,i) = interp1(t1,xddot(:,:,i),ti);
             end
-        end
-    end
-    if nargin > 3 && ~isempty(xalg)
-        for i = 1:size(xalg,3)
-            xalgi(:,i) = interp1(t1,xalg(:,:,i),ti);
         end
     end
 end
@@ -135,9 +119,6 @@ if nargout >2
     varargout{3} = xdoti;
     if nargout > 3
         varargout{4} = xddoti;
-        if nargout > 4
-            varargout{5} = xalgi;
-        end
     end
 end
 

@@ -1,6 +1,5 @@
 function sol = hbm_solve(hbm,problem,w0,A,x0)
 NDof = problem.NDof;
-NAlg = problem.NAlg;
 Nfft  = hbm.harm.Nfft;
 
 if nargin < 5 || isempty(x0)
@@ -61,7 +60,7 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
     end
-    X0 = X + 1E-8*rand(Nhbm+prod(Nfft)*NAlg,1);
+    X0 = X + 1E-8*rand(Nhbm,1);
     attempts = attempts + 1;
 end
 if ~bSuccess
@@ -70,8 +69,7 @@ end
 % F = feval(funcs.constraints,X,options.auxdata);
 
 x = X.*problem.xscale;
-sol.X = unpackdof(x(1:Nhbm),hbm.harm.NFreq-1,problem.NDof,iRetain);
-sol.xalg = squeeze(permute(reshape(x(Nhbm+1:end,:),NAlg,Nfft(1),Nfft(2)),[2 3 1]));
+sol.X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,iRetain);
 sol.w0 = w0;
 
 w = w0*hbm.harm.rFreqRatio;

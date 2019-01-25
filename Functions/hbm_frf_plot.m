@@ -218,11 +218,10 @@ t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
 [t1,t2] = ndgrid(t1,t2);
 t = [t1(:) t2(:)];
 
-xalg = zeros(prod(Nfft),0);
-f0 = feval(problem.model,'nl',t',x',xdot',xddot',u',udot',uddot',xalg',hbm,problem,w0).';
+f0 = feval(problem.model,'nl',t',x',xdot',xddot',u',udot',uddot',hbm,problem,w0).';
 
-[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,u,udot,uddot,xalg,f0,hbm,problem,w0);
-[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,u,udot,uddot,xalg,f0,hbm,problem,w0);
+[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
+[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
 
 K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
 Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);

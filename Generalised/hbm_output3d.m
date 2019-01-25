@@ -6,7 +6,6 @@ end
 
 NInput = problem.NInput;
 NDof   = problem.NDof;
-NAlg   = problem.NAlg;
 
 NHarm  = hbm.harm.NHarm;
 NComp  = hbm.harm.NComp;
@@ -30,7 +29,6 @@ X = unpackdof(x,NFreq-1,NDof,iRetain);
 Wx = repmat(1i*w,1,size(X,2));
 Xdot  = X.*Wx;
 Xddot = Xdot.*Wx;
-xalg   = reshape(x(NRetain+1:end,:),problem.NAlg,prod(Nfft))';
 
 U = unpackdof(u,NFreq-1,problem.NInput);
 Wu = repmat(1i*w,1,size(U,2));
@@ -62,7 +60,7 @@ switch hbm.options.aft_method
 end
 
 %push through the nl system
-o = feval(problem.model,'output',t', x.',xdot.',xddot.',u.',udot.',uddot.',xalg.',hbm,problem,w0).';
+o = feval(problem.model,'output',t', x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0).';
 
 %finally convert into a fourier series
 switch hbm.options.aft_method

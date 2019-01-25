@@ -38,7 +38,7 @@ problem = setupProblem(problem);
 hbm.harm = setupGroups(problem,hbm.harm);
 
 if ~isfield(problem,'sparsity')
-    hbm.sparsity = ones(hbm.harm.NComp*problem.NDof + prod(hbm.harm.Nfft)*problem.NAlg);
+    hbm.sparsity = ones(hbm.harm.NComp*problem.NDof);
 else
     Jxx = repmat(problem.sparsity(1:problem.NDof,1:problem.NDof),hbm.harm.NComp);
     Jxa = repmat(problem.sparsity(1:problem.NDof,problem.NDof+1:end),hbm.harm.NComp,prod(hbm.harm.Nfft));
@@ -48,11 +48,6 @@ else
     iRetain = hbm.harm.iRetain;
     hbm.sparsity = [Jxx(iRetain,iRetain) Jxa(iRetain,:);
                     Jax(:,iRetain) Jaa];
-end
-
-if problem.NAlg > 0 && strcmp(hbm.options.jacob_method,'sum')
-    warning('Defaulting Jacobian method to "mat". "sum" is not supported for problems with algebraic constraints')
-    hbm.options.jacob_method = 'mat';
 end
 
 %% Precompute matrices
@@ -69,7 +64,7 @@ if ~isfield(options,'solver'), options.solver = 'ipopt'; end
 options = default_missing(options,{'aft_method','jacob_method'},{'mat','mat'});
 
 function dependence = setupDependence(dependence)
-dependence = default_missing(dependence,{'x','xdot','xddot','w','u','udot','uddot','xalg'},{true,false,false,false,false,false,false,false});
+dependence = default_missing(dependence,{'x','xdot','xddot','w','u','udot','uddot'},{true,false,false,false,false,false,false});
 
 function scaling = setupScaling(scaling)
 scaling = default_missing(scaling,{'method','tol'},{'max',1E-6});
@@ -91,9 +86,6 @@ if ~isfield(problem,'name')
 end
 if ~isfield(problem,'NDof')
     problem.NDof = size(problem.K,2);
-end
-if ~isfield(problem,'NAlg')
-    problem.NAlg = 0;
 end
 if ~isfield(problem,'NInput')
     problem.NInput = size(problem.Ku,2);

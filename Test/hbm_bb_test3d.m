@@ -7,7 +7,7 @@ hbm.harm.rFreqRatio = 1;
 hbm.harm.NHarm = 2;
 hbm.harm.Nfft = 32;
 
-hbm.options.bUseStandardHBM = true;
+% hbm.options.bUseStandardHBM = true;
 hbm.dependence.x = true;
 hbm.dependence.xdot  = true;
 hbm.dependence.w = false;

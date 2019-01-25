@@ -26,7 +26,6 @@ aft = get_aft_jacobians(harm);
 
 %now make the specifis matrices we will need
 nonlin.hbm = get_hbm_matrices(problem,harm,aft,iRetain);
-nonlin.alg = get_alg_matrices(problem,aft,iRetain);
 
 function aft = get_aft_jacobians(harm)
 aft.fft.J = aft_jacobian_fft(harm);
@@ -85,28 +84,6 @@ end
 hbm.ijacobx = repmat((1:problem.NDof)',harm.NComp,1);
 hbm.ijacobx = hbm.ijacobx(iRetain);
 hbm.ijacobu = repmat((1:problem.NInput)',harm.NComp,1);
-
-function alg = get_alg_matrices(problem,aft,iRetain)
-%% Algebraic contraints
-alg.Jf     = resize_jacobian(aft.fft.J,problem.NDof,problem.NAlg); 
-alg.Jf     = alg.Jf(iRetain,:,:);
-
-alg.Jx     = resize_jacobian(aft.ifft.J,problem.NAlg,problem.NDof); 
-alg.Jx     = alg.Jx(:,iRetain,:);
-
-alg.Jxdot    = resize_jacobian(aft.ifft.Jdot,problem.NAlg,problem.NDof); 
-for i = 1:2
-    alg.Jxdot{i} = alg.Jxdot{i}(:,iRetain,:);
-end
-
-alg.Jxddot    = resize_jacobian(aft.ifft.Jddot,problem.NAlg,problem.NDof); 
-for i = 1:3
-    alg.Jxddot{i} = alg.Jxddot{i}(:,iRetain,:);
-end
-
-alg.Ju     = resize_jacobian(aft.ifft.J   ,problem.NAlg,problem.NInput); 
-alg.Judot  = resize_jacobian(aft.ifft.Jdot,problem.NAlg,problem.NInput); 
-
 
 function Ju = resize_jacobian(ju,NOutput,NInput)
 if ~iscell(ju)

@@ -6,7 +6,6 @@ end
 
 NInput = problem.NInput;
 NDof   = problem.NDof;
-NAlg   = problem.NAlg;
 
 NHarm  = hbm.harm.NHarm;
 NComp  = hbm.harm.NComp;
@@ -29,7 +28,6 @@ t = [t1(:) t2(:)];
 %work out the time domain
 X = unpackdof(Xp,NFreq-1,NDof,iRetain);
 U = unpackdof(Up,NFreq-1,NInput);
-xalg = reshape(Xp(NRetain+1:end),NAlg,prod(Nfft))';
 
 %compute the fourier coefficients of the derivatives
 Wx = repmat(1i*w,1,size(X,2));
@@ -66,8 +64,7 @@ switch hbm.options.aft_method
 end
 
 %push through the nl system
-f_hbm = feval(problem.model,'nl' ,t',x.',xdot.',xddot.',u.',udot.',uddot.',xalg.',hbm,problem,w0).';
-f_alg = feval(problem.model,'alg',t',x.',xdot.',xddot.',u.',udot.',uddot.',xalg.',hbm,problem,w0).';
+f_hbm = feval(problem.model,'nl' ,t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0).';
 
 %finally convert into a fourier series
 switch hbm.options.aft_method
@@ -79,8 +76,7 @@ switch hbm.options.aft_method
         F = hbm.nonlin.FFT*f_hbm;
 end
 
-Fp = [packdof(F,iRetain);
-    reshape(f_alg',[],1)];
+Fp = packdof(F,iRetain);
 
 if ~iscell(command)
     command = {command};
@@ -100,16 +96,12 @@ for o = 1:length(command)
             if ~hbm.dependence.w
                 Dw = repmat({zeros(NRetain,1)},1,2);
             else
-                dfhbm_dw = hbm_derivatives('nl' ,'w',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dw = hbm_derivatives('alg','w',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_dw = hbm_derivatives('nl' ,'w',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 if isfield(problem,'derivW')
-                    Dw = feval(problem.derivW,dfhbm_dw,dfalg_dw,hbm,problem,w0);
+                    Dw = feval(problem.derivW,dfhbm_dw,hbm,problem,w0);
                 else
                     for n = 1:2
                         Dw{n} = packdof(hbm.nonlin.FFT*dfhbm_dw{n},iRetain);
-                        if problem.NAlg > 0
-                            Dw{n} = [Dw{n}; catmat(dfalg_dw{n},1)];
-                        end
                     end
                 end
             end
@@ -118,23 +110,14 @@ for o = 1:length(command)
             if ~hbm.dependence.x
                 Jx = zeros(NRetain);
             else
-                dfhbm_dxhbm = hbm_derivatives('nl','x'  ,t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfhbm_dxalg = hbm_derivatives('nl','alg',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                
-                dfalg_dxhbm = hbm_derivatives('alg','x'  ,t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
-                dfalg_dxalg = hbm_derivatives('alg','alg',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_dxhbm = hbm_derivatives('nl','x'  ,t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'jacobX')
-                    Jx = feval(problem.jacobX,dfhbm_dxhbm,dfhbm_dxalg,dfalg_dxhbm,dfalg_dxalg,hbm,problem,w0);
+                    Jx = feval(problem.jacobX,dfhbm_dxhbm,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Jxx = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxhbm(ijacobx,ijacobx,:),3);
-                            Jxa = catmat(hbm.nonlin.alg.Jf.*dfhbm_dxalg(ijacobx,:,:),2);
-                            Jax = catmat(hbm.nonlin.alg.Jx.*dfalg_dxhbm(:,ijacobx,:),1);
-                            Jaa = blkmat(dfalg_dxalg);
-                            Jx = [ Jxx   Jxa;
-                                Jax   Jaa];
+                            Jx = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxhbm(ijacobx,ijacobx,:),3);
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
                             theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
@@ -171,17 +154,14 @@ for o = 1:length(command)
             if ~hbm.dependence.u
                 Ju = zeros(NRetain,NComp*NInput);
             else
-                dfhbm_du = hbm_derivatives('nl' ,'u',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_du = hbm_derivatives('alg','u',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_du = hbm_derivatives('nl' ,'u',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'jacobU')
-                    Ju = feval(problem.jacobU,dfhbm_du,dfalg_du,hbm,problem,w0);
+                    Ju = feval(problem.jacobU,dfhbm_du,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Jxu = sum(hbm.nonlin.hbm.Ju.*dfhbm_du(ijacobx,ijacobu,:),3);
-                            Jau = catmat(hbm.nonlin.alg.Ju.*dfalg_du(:,ijacobu,:),1);
-                            Ju = [Jxu; Jau];
+                            Ju = sum(hbm.nonlin.hbm.Ju.*dfhbm_du(ijacobx,ijacobu,:),3);
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
                             theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
@@ -218,21 +198,15 @@ for o = 1:length(command)
             if ~hbm.dependence.xdot
                 Jxdot = repmat({zeros(NRetain)},1,2);
             else
-                dfhbm_dxdot = hbm_derivatives('nl' ,'xdot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dxdot = hbm_derivatives('alg','xdot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
-                
+                dfhbm_dxdot = hbm_derivatives('nl' ,'xdot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
+
                 if isfield(problem,'jacobXdot')
-                    Jxdot = feval(problem.jacobXdot,dfhbm_dxdot,dfalg_dxdot,hbm,problem,w0);
+                    Jxdot = feval(problem.jacobXdot,dfhbm_dxdot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:2
-                                Jxx = sum(hbm.nonlin.hbm.Jxdot{n}.*dfhbm_dxdot(ijacobx,ijacobx,:),3);
-                                Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                                Jax = catmat(hbm.nonlin.alg.Jxdot{n}.*dfalg_dxdot(:,ijacobx,:),1);
-                                Jaa = zeros(NAlg*prod(Nfft));
-                                Jxdot{n} = [Jxx Jxa;
-                                    Jax Jaa];
+                                Jxdot{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*dfhbm_dxdot(ijacobx,ijacobx,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -269,18 +243,15 @@ for o = 1:length(command)
             if ~hbm.dependence.udot
                 Judot = repmat({zeros(NRetain,NComp*NInput)},1,2);
             else
-                dfhbm_dudot = hbm_derivatives('nl','udot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dudot = hbm_derivatives('alg','udot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
-                
+                dfhbm_dudot = hbm_derivatives('nl','udot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
+
                 if isfield(problem,'jacobUdot')
-                    Judot = feval(problem.jacobUdot,dfhbm_dudot,dfalg_dudot,hbm,problem,w0);
+                    Judot = feval(problem.jacobUdot,dfhbm_dudot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:2
-                                Jxu = sum(hbm.nonlin.hbm.Judot{n}.*dfhbm_dudot(ijacobx,ijacobu,:),3);
-                                Jau = catmat(hbm.nonlin.alg.Judot{n}.*dfalg_dudot(:,ijacobu,:),1);
-                                Judot{n} = [Jxu; Jau];
+                                Judot{n} = sum(hbm.nonlin.hbm.Judot{n}.*dfhbm_dudot(ijacobx,ijacobu,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -317,21 +288,15 @@ for o = 1:length(command)
             if ~hbm.dependence.xddot
                 Jxddot = repmat({zeros(NRetain)},1,3);
             else
-                dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dxddot = hbm_derivatives('alg','xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'jacobXdot')
-                    Jxddot = feval(problem.jacobXdot,dfhbm_dxddot,dfalg_dxddot,hbm,problem,w0);
+                    Jxddot = feval(problem.jacobXdot,dfhbm_dxddot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:3
-                                Jxx = sum(hbm.nonlin.hbm.Jxddot{n}.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
-                                Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                                Jax = catmat(hbm.nonlin.alg.Jxddot{n}.*dfalg_dxddot(:,ijacobx,:),1);
-                                Jaa = zeros(NAlg*prod(Nfft));
-                                Jxddot{n} = [Jxx Jxa;
-                                    Jax Jaa];
+                                Jxddot{n} = sum(hbm.nonlin.hbm.Jxddot{n}.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -385,21 +350,15 @@ for o = 1:length(command)
             if ~hbm.dependence.uddot
                 Juddot = repmat({zeros(NRetain,NComp*NInput)},1,3);
             else
-                dfhbm_duddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_duddot = hbm_derivatives('alg','xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_duddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'jacobXdot')
-                    Juddot = feval(problem.jacobXdot,dfhbm_duddot,dfalg_duddot,hbm,problem,w0);
+                    Juddot = feval(problem.jacobXdot,dfhbm_duddot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:3
-                                Jxx = sum(hbm.nonlin.hbm.Jxddot{n}.*dfhbm_duddot(ijacobx,ijacobu,:),3);
-                                Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                                Jax = catmat(hbm.nonlin.alg.Jxddot{n}.*dfalg_duddot(:,ijacobu,:),1);
-                                Jaa = zeros(NAlg*prod(Nfft));
-                                Juddot{n} = [Jxx Jxa;
-                                    Jax Jaa];
+                                Juddot{n} = sum(hbm.nonlin.hbm.Jxddot{n}.*dfhbm_duddot(ijacobx,ijacobu,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -452,20 +411,14 @@ for o = 1:length(command)
            if ~hbm.dependence.xdot
                 D1 = zeros(NRetain);
             else
-                dfhbm_dxdot = hbm_derivatives('nl' ,'xdot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dxdot = hbm_derivatives('alg','xdot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_dxdot = hbm_derivatives('nl' ,'xdot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'floquet1xdot')
-                    D1 = feval(problem.floquet1xdot,dfhbm_dxdot,dfalg_dxdot,hbm,problem,w0);
+                    D1 = feval(problem.floquet1xdot,dfhbm_dxdot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Jxx = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxdot(ijacobx,ijacobx,:),3);
-                            Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                            Jax = catmat(hbm.nonlin.alg.Jx.*dfalg_dxdot(:,ijacobx,:),1);
-                            Jaa = zeros(NAlg*prod(Nfft));
-                            D1 = [Jxx Jxa;
-                                  Jax Jaa];
+                            D1 = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxdot(ijacobx,ijacobx,:),3);
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
                             theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
@@ -502,21 +455,15 @@ for o = 1:length(command)
            if ~hbm.dependence.xddot
                 D1 = repmat({zeros(NRetain)},1,2);
             else
-                dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-                dfalg_dxddot = hbm_derivatives('alg','xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+                dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                 
                 if isfield(problem,'floquet1xddot')
-                    D1 = feval(problem.floquet1xddot,dfhbm_dxddot,dfalg_dxddot,hbm,problem,w0);
+                    D1 = feval(problem.floquet1xddot,dfhbm_dxddot,hbm,problem,w0);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:2
-                                Jxx = sum(hbm.nonlin.hbm.Jxdot{n}.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
-                                Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                                Jax = catmat(hbm.nonlin.alg.Jxdot{n}.*dfalg_dxddot(:,ijacobx,:),1);
-                                Jaa = zeros(NAlg*prod(Nfft));
-                                D1{n} = [Jxx Jxa;
-                                      Jax Jaa];
+                                D1{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -554,20 +501,14 @@ for o = 1:length(command)
            if ~hbm.dependence.xddot
                D2 = zeros(NRetain);
            else
-               dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_hbm,hbm,problem,w0);
-               dfalg_dxddot = hbm_derivatives('alg','xddot',t,x,xdot,xddot,u,udot,uddot,xalg,f_alg,hbm,problem,w0);
+               dfhbm_dxddot = hbm_derivatives('nl' ,'xddot',t,x,xdot,xddot,u,udot,uddot,f_hbm,hbm,problem,w0);
                
                if isfield(problem,'floquet2')
-                   D2 = feval(problem.floquet2,dfhbm_dxddot,dfalg_dxddot,hbm,problem,w0);
+                   D2 = feval(problem.floquet2,dfhbm_dxddot,hbm,problem,w0);
                else
                    switch hbm.options.jacob_method
                        case 'mat'
-                           Jxx = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
-                           Jxa = zeros(NRetain,NAlg*prod(Nfft));
-                           Jax = catmat(hbm.nonlin.alg.Jx.*dfalg_dxddot(:,ijacobx,:),1);
-                           Jaa = zeros(NAlg*prod(Nfft));
-                           D2 = [Jxx Jxa;
-                               Jax Jaa];
+                           D2 = sum(hbm.nonlin.hbm.Jx.*dfhbm_dxddot(ijacobx,ijacobx,:),3);
                        case 'sum'
                            theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
                            theta2 = 2*pi/Nfft(2)*(0:(Nfft(2)-1));
