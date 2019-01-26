@@ -22,7 +22,9 @@ xdot = y(NDof+1:end,:);
 
 Fe = problem.Ku*u + problem.Cu*udot + problem.Mu*uddot;
 Fl = -problem.C*xdot - problem.K*x;
-Fnl  = -test_model('nl' ,t,x,xdot,0*xdot,u,udot,uddot,hbm,problem,w0);
+
+States = struct('t',t,'x',x,'xdot',xdot,'u',u,'udot',udot,'uddot',uddot,'w0',w0);
+Fnl  = -test_model('nl' ,States,hbm,problem);
 
 Ftot = Fl + Fnl + Fe;
 

@@ -1,10 +1,12 @@
-function varargout = test_model(part,t,x,xdot,xddot,u,udot,uddot,hbm,problem,w0)
+function varargout = test_model(part,States,hbm,problem)
 if ~iscell(part)
     part = {part};
 end
 
 P = problem.P;
-NPts = size(x,2);
+NPts = size(States.t,2);
+x = States.x;
+xdot = States.xdot;
 
 varargout = {};
 
@@ -39,9 +41,9 @@ for i = 1:length(part)
              Cnl = [c1,0*c1;0*c2,c2];
              varargout{end+1} = Cnl;
         case 'nl_u'
-            varargout{end+1} = zeros(2,1,length(t));
+            varargout{end+1} = zeros(2,1,NPts);
         case 'nl_udot'
-            varargout{end+1} = zeros(2,1,length(t));
+            varargout{end+1} = zeros(2,1,NPts);
         otherwise
             varargout{end+1} = [];
     end

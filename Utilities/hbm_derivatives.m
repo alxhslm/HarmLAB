@@ -1,143 +1,51 @@
-function varargout = hbm_derivatives(fun,var,t,x,xdot,xddot,u,udot,uddot,f,hbm,problem,w0)
-NPts = size(x,1);
+function varargout = hbm_derivatives(fun,var,States,hbm,problem)
+NPts = size(States.t,2);
 
 if ~iscell(var)
     var = {var};
 end
 
 for i = 1:length(var)
-    switch var{i}
-        case 'x'
-            df_dx = feval(problem.model,[fun '_x'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_dx)
-                if hbm.dependence.x
-                    f0 = f.';
-                    h = 1E-10;
-                    df_dx = zeros(size(f,2),problem.NDof,NPts);
-                    for j = 1:problem.NDof
-                        x2 = x.';
-                        x2(j,:) = x2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x2,xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-                        df_dx(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_dx = zeros(size(f,2),problem.NDof,NPts);
+    if strcmp(var{i},'w')    
+        %for frequency derivatives, it's a bit more complicated as we have to rescale the time vector as well     
+        df_dw = feval(problem.model,[fun '_w'],States,hbm,problem);
+        if isempty(df_dw)
+            h = 1E-6;
+            NFreq = length(States.w0);
+            
+            if hbm.dependence.w
+                for k = 1:NFreq
+                    States2 = States;
+                    States2.w(k) = States.w(k) + h;
+                    States2.t(k,:) = w0(k)*States2.t(k,:)/States2.w(k);
+                    States2.f = feval(problem.model,fun,States2,hbm,problem);
+                    df_dw{k} = (States2.f-States.f)./h;
                 end
+            else
+                df_dw = repmat({zeros(size(f,2),NPts)},1,NFreq);
             end
-            varargout{i} = df_dx;
-        case 'xdot'
-            df_dxdot = feval(problem.model,[fun '_xdot'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_dxdot)
-                if hbm.dependence.xdot
-                    f0 = f.';
-                    h = 1E-10;
-                    df_dxdot = zeros(size(f,2),problem.NDof,NPts);
-                    for j = 1:problem.NDof
-                        xdot2 =  xdot.';
-                        xdot2(j,:) = xdot2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x.',xdot2,xddot.',u.',udot.',uddot.',hbm,problem,w0);
-                        df_dxdot(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_dxdot = zeros(size(f,2),problem.NDof,NPts);
+        end
+        for k = 1:length(w0)
+            df_dw{k} = df_dw{k}.';
+        end
+        varargout{i} = df_dw;
+    else
+        %for everything else, we just peturb each element in turn
+        df_dvar = feval(problem.model,[fun '_' var{i}],States,hbm,problem);
+        if isempty(df_dvar)
+            if hbm.dependence.x
+                h = 1E-10;
+                df_dvar = zeros(size(States.f,1),size(States.(var{i}),1),NPts);
+                for j = 1:problem.NDof
+                    States2 = States;
+                    States2.(var{i})(j,:) = States.(var{i})(j,:) + h;
+                    States2.f = feval(problem.model,fun,States2,hbm,problem);
+                    df_dvar(:,j,:) = permute((States2.f-States.f)./h,[1 3 2]);
                 end
+            else
+                df_dvar = zeros(size(States.f,2),size(States.(var{i}),1),NPts);
             end
-            varargout{i} = df_dxdot;
-        case 'xddot'
-            df_dxddot = feval(problem.model,[fun '_xddot'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_dxddot)
-                if hbm.dependence.xddot
-                    f0 = f.';
-                    h = 1E-10;
-                    df_dxddot = zeros(size(f,2),problem.NDof,NPts);
-                    for j = 1:problem.NDof
-                        xddot2 =  xddot.';
-                        xddot2(j,:) = xddot2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x.',xdot.',xddot2,u.',udot.',uddot.',hbm,problem,w0);
-                        df_dxddot(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_dxddot = zeros(size(f,2),problem.NDof,NPts);
-                end
-            end
-            varargout{i} = df_dxddot;
-        case 'u'
-            df_du = feval(problem.model,[fun '_u'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_du)
-                if hbm.dependence.u
-                    f0 = f.';
-                    h = 1E-10;
-                    df_du = zeros(size(f,2),problem.NInput,NPts);
-                    for j = 1:problem.NInput
-                        u2 = u.';
-                        u2(j,:) = u2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x.',xdot.',xddot.',u2,udot.',uddot.',hbm,problem,w0);
-                        df_du(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_du = zeros(size(f,2),problem.NInput,NPts);
-                end
-            end
-            varargout{i} = df_du;
-        case 'udot'
-            df_dudot = feval(problem.model,[fun '_udot'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_dudot)
-                if hbm.dependence.udot
-                    f0 = f.';
-                    h = 1E-10;
-                    df_dudot = zeros(size(f,2),problem.NInput,NPts);
-                    for j = 1:problem.NInput
-                        udot2 =  udot.';
-                        udot2(j,:) = udot2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x.',xdot.',xddot.',u.',udot2,uddot.',hbm,problem,w0);
-                        df_dudot(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_dudot = zeros(size(f,2),problem.NInput,NPts);
-                end
-            end
-            varargout{i} = df_dudot;
-         case 'uddot'
-            df_duddot = feval(problem.model,[fun '_uddot'],t',x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_duddot)
-                if hbm.dependence.udot
-                    f0 = f.';
-                    h = 1E-10;
-                    df_duddot = zeros(size(f,2),problem.NInput,NPts);
-                    for j = 1:problem.NInput
-                        uddot2 =  uddot.';
-                        uddot2(j,:) = uddot2(j,:) + h;
-                        f2 = feval(problem.model,fun,t',x.',xdot.',xddot.',u.',udot.',uddot2,hbm,problem,w0);
-                        df_duddot(:,j,:) = permute((f2-f0)./h,[1 3 2]);
-                    end
-                else
-                    df_duddot = zeros(size(f,2),problem.NInput,NPts);
-                end
-            end
-            varargout{i} = df_duddot;
-        case 'w'
-            df_dw = feval(problem.model,[fun '_w'],t', x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w0);
-            if isempty(df_dw)
-                f0 = f.';
-                h = 1E-6;
-                NFreq = length(w0);
-                
-                if hbm.dependence.w
-                     for k = 1:length(w0)
-                        w2 = w0;
-                        t2 = t';
-                        w2(k) = w2(k) + h;
-                        t2(k,:) = w0(k)*t2(k,:)/w2(k);
-                        f = feval(problem.model,fun,t2, x.',xdot.',xddot.',u.',udot.',uddot.',hbm,problem,w2);
-                        df_dw{k} = (f-f0)./h;
-                    end
-                else
-                    df_dw = repmat({zeros(size(f,2),NPts)},1,NFreq);
-                end
-            end
-            for k = 1:length(w0)
-                df_dw{k} = df_dw{k}.';
-            end
-            varargout{i} = df_dw;
+        end
+        varargout{i} = df_dvar;
     end
 end
