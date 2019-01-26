@@ -36,7 +36,7 @@ for i = 1:length(var)
             if hbm.dependence.x
                 h = 1E-10;
                 df_dvar = zeros(size(States.f,1),size(States.(var{i}),1),NPts);
-                for j = 1:problem.NDof
+                for j = 1:size(States.(var{i}),1)
                     States2 = States;
                     States2.(var{i})(j,:) = States.(var{i})(j,:) + h;
                     States2.f = feval(problem.model,fun,States2,hbm,problem);

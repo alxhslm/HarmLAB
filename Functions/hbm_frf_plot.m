@@ -183,45 +183,18 @@ x0 = X(1,:).';
 U = A*feval(problem.excite,hbm,problem,w0);
 u0 = U(1,:).';
 
-%compute the fourier coefficients of the derivatives
-Wx = repmat(1i*w,1,size(X,2));
-Xdot  = X.*Wx;
-Xddot = Xdot.*Wx;
-
-%precompute the external inputs
-Wu = repmat(1i*w,1,size(U,2));
-Udot  = U.*Wu;
-Uddot = Udot.*Wu;
-
-x     = freq2time3d(X,NHarm,hbm.harm.iSub,Nfft);
-xdot  = freq2time3d(Xdot,NHarm,hbm.harm.iSub,Nfft);
-xddot = freq2time3d(Xddot,NHarm,hbm.harm.iSub,Nfft);
-
-%create the vector of inputs
-u     = freq2time3d(U,NHarm,hbm.harm.iSub,Nfft);
-udot  = freq2time3d(Udot,NHarm,hbm.harm.iSub,Nfft);
-uddot = freq2time3d(Uddot,NHarm,hbm.harm.iSub,Nfft);
-
-% %create the time series from the fourier series
-% x     = repmat(x0,1,prod(Nfft))';
-% xdot  = 0*x;
-% xddot = 0*x;
-% 
-% %create the vector of inputs
-% u     = repmat(u0,1,prod(Nfft))';
-% udot  = 0*u;
-% uddot = 0*u;
+States = hbm_states3d(w0,X,U,hbm);
 
 %work out the time vector
 t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wB(1);
 t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
 [t1,t2] = ndgrid(t1,t2);
-t = [t1(:) t2(:)];
+States.t = [t1(:) t2(:)].';
 
-f0 = feval(problem.model,'nl',t',x',xdot',xddot',u',udot',uddot',hbm,problem,w0).';
+States.f = feval(problem.model,'nl',States,hbm,problem);
 
-[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
-[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
+[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
+[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States,hbm,problem);
 
 K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
 Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
