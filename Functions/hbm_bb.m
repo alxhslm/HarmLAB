@@ -28,8 +28,9 @@ if isfield(problem,'xhscale')
     xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
     problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
+    problem.Ascale = mean([A0 AEnd]);
     problem.Fscale = problem.xscale*0+1;
-    problem.Xscale = [problem.xscale; problem.wscale];
+    problem.Xscale = [problem.xscale; problem.wscale; problem.Ascale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
     bUpdateScaling = 0;
 else
@@ -425,17 +426,17 @@ switch hbm.cont.method
         lab_col = coco_bd_col(bd, 'TYPE');
         NPts = sum(cellfun(@(x)~isempty(x),lab_col));
         x = zeros(hbm.harm.NComp*NDof,NPts);
-        w = zeros(NPts,1);
-        A = zeros(NPts,1);
+        w = zeros(1,NPts);
+        A = zeros(1,NPts);
         for i = 1:NPts
             chart = coco_read_solution('temp',i,'chart');
             x(:,i) = chart.x(1:end-3);
             w(i) = chart.x(end-2);
             A(i) = chart.x(end);
         end
-        w = w .* problem.Xscale(end-1);
-        A = A .* problem.Xscale(end);
-        x = x .* (problem.Xscale(1:end-2)*(0*w'+1));
+        w = w .* problem.wscale;
+        A = A .* problem.Ascale;
+        x = x .* (problem.xscale*(0*w+1));
         fclose all;
         try
             rmdir('data','s')
@@ -609,7 +610,6 @@ obj = feval(problem.obj,X,U,F,hbm,problem,w0);
 function [data res] = hbm_coco_callback(prob, data, command, varargin)
 hbm = data.hbm;
 problem = data.problem;
-Xscale = problem.Xscale;
 
 switch command
     case 'init'
@@ -619,8 +619,8 @@ switch command
         hbm_bb_plot('init',hbm,problem,A0,NaN,w0);
     case 'data'
         chart = varargin{1};
-        w = chart.x(end-2).*Xscale(end-1);
-        a = chart.x(end).*Xscale(end);
+        w = chart.x(end-2).*problem.wscale;
+        a = chart.x(end).*problem.Ascale;
         hbm_bb_plot('data',hbm,problem,a,h,w);
         res = {};
 end

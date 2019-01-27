@@ -8,7 +8,7 @@ if hbm.cont.bUpdate
             end
                           
             if isempty(x) || isempty(w0)
-                X = zeros(hbm.Freq,problem.NDof);
+                X = zeros(hbm.harm.NFreq,problem.NDof);
                 w0 = NaN;
             else
                 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
