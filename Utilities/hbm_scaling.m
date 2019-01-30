@@ -15,19 +15,21 @@ problem.xscale = packdof(xscale,hbm.harm.iRetain);
 problem.Xscale = problem.xscale;
 problem.Fscale = ones(length(problem.xscale),1);
 
-if nargin > 3
+if nargin > 3 && ~isempty(w)
     %frf,resonance, or bb
     problem.wscale = w;
     problem.Xscale(end+1) = w;
 end
 
 if nargin > 4
-    %bb
+    %bb or amp
     problem.Ascale = A;
     problem.Xscale(end+1) = A;
     
-    %need extra resonance condition
-    problem.Fscale(end+1) = 1;
+    if ~isempty(w)
+        %bb - need extra resonance condition
+        problem.Fscale(end+1) = 1;
+    end
 end
 
 problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';

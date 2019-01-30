@@ -1,5 +1,7 @@
-function hbm_frf_plot(command,hbm,problem,x,w0,A)
-persistent fig hSuccess hWarn hErr X W
+function hbm_amp_plot(command,hbm,problem,x,a)
+persistent fig hSuccess hWarn hErr X A
+w0 = problem.w0;
+
 if hbm.cont.bUpdate
     switch command
         case 'init'
@@ -7,34 +9,33 @@ if hbm.cont.bUpdate
                 close(fig)
             end
                           
-            if isempty(x) || isempty(w0)
+            if isempty(x) || isempty(A)
                 X = zeros(hbm.harm.NFreq,problem.NDof);
-                w0 = NaN;
+                A = NaN;
             else
                 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+                A = a;
             end
-            W = getfrequencies(w0,hbm);
-            [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A);
-            [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
+            [xlin, Alin] = getLinearReponse(hbm,problem,X,w0);
+            [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,A,xlin,Alin);
 
         case {'data','err','warn'}
             if ~ishandle(fig(1))
-                [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),A);
-                [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
+                [xlin, Alin] = getLinearReponse(hbm,problem,X(:,:,1),w0);
+                [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,A,xlin,Alin);
             end
             
             X(:,:,end+1) = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-            W(:,end+1) = getfrequencies(w0,hbm);
+            A(:,end+1) = a;
             Xabs = abs(X); Xabs = Xabs(:,:,end);
             Xph = unwrap(angle(X)); Xph = Xph(:,:,end);
-            Wfreq = W(:,end);
             if any(strcmpi(command,{'data','warn'}))
-                update_handles(hSuccess,Xabs,Xph,Wfreq,hbm,problem)
+                update_handles(hSuccess,Xabs,Xph,a,hbm,problem)
                 %update our progress
                 
                 if strcmpi(command,'warn')
                     %warning, overlay in blue
-                    update_handles(hWarn,Xabs,Xph,Wfreq,hbm,problem)
+                    update_handles(hWarn,Xabs,Xph,a,hbm,problem)
                 end
                 
                 %reset the error points
@@ -49,8 +50,8 @@ if hbm.cont.bUpdate
             else
                 %error
                 X(:,:,end) = [];
-                W(:,end) = [];
-                update_handles(hErr,Xabs,Xph,Wfreq,hbm,problem)
+                A(:,end) = [];
+                update_handles(hErr,Xabs,Xph,a,hbm,problem)
             end
 
             drawnow
@@ -62,38 +63,29 @@ if hbm.cont.bUpdate
     end
 end
 
-function update_handles(han,Xabs,Xph,W,hbm,problem)
+function update_handles(han,Xabs,Xph,A,hbm,problem)
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:length(problem.iDofPlot)
-        w = [get(han{1}(i,j),'xdata'),W(hbm.harm.iHarmPlot(i),:)];
+        a = [get(han{1}(i,j),'xdata'),A];
         mag = [get(han{1}(i,j),'ydata'),permute(Xabs(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
         ph  = [get(han{2}(i,j) ,'ydata'),permute(Xph(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
-        set(han{1}(i,j),'xdata',w,'ydata',mag);
-        set(han{2}(i,j) ,'xdata',w,'ydata',ph);
+        set(han{1}(i,j),'xdata',a,'ydata',mag);
+        set(han{2}(i,j) ,'xdata',a,'ydata',ph);
     end
 end
 
-function ws = getfrequencies(w0,hbm)
-w = (hbm.harm.rFreqBase.*hbm.harm.rFreqRatio)'*w0;
-ws = abs(hbm.harm.kHarm(:,1)*w(1,:) + hbm.harm.kHarm(:,2)*w(2,:));
-ws(ws == 0) = w0;
-
-function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,w,xlin,wlin0)
-matlabPos = getMatlabSize;
-figPos = matlabPos;
-figPos(4) = matlabPos(4)/2;
-figPos(2) = matlabPos(2) + figPos(4);
-fMag = figure('Name',[problem.name],'OuterPosition',figPos,'WindowStyle', 'Docked');
-
-wlin = getfrequencies(wlin0,hbm);
-wlim = getfrequencies([problem.wMin problem.wMax],hbm);
+function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,A,xlin,Alin)
+% matlabPos = getMatlabSize;
+% figPos = matlabPos;
+% figPos(4) = matlabPos(4)/2;
+% figPos(2) = matlabPos(2) + figPos(4);
+fMag = figure('Name',[problem.name]);%,'OuterPosition',figPos,'WindowStyle', 'Docked');
 
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:length(problem.iDofPlot)
         tmp = subplot(length(problem.iDofPlot),length(hbm.harm.iHarmPlot),(j-1)*length(hbm.harm.iHarmPlot) + i,'Parent',fMag);        
         Xij = squeeze(xlin(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:));
-        wij = wlin(hbm.harm.iHarmPlot(i),:);
-        [tmp2,hLin{1}(i,j),hLin{2}(i,j)] = plotyy(tmp,wij,abs(Xij),wij,unwrap(angle(Xij)));
+        [tmp2,hLin{1}(i,j),hLin{2}(i,j)] = plotyy(tmp,Alin,abs(Xij),Alin,unwrap(angle(Xij)));
         ax{1}(i,j) = tmp2(1); ax{2}(i,j) = tmp2(2);
         hold(tmp2(1), 'on');
         hold(tmp2(2), 'on');
@@ -102,8 +94,8 @@ end
 
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:length(problem.iDofPlot)
-        hSuccess{1}(i,j)  = plot(ax{1}(i,j),w(hbm.harm.iHarmPlot(i),:),abs(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:))),'g.-');
-        hSuccess{2}(i,j)  = plot(ax{2}(i,j),w(hbm.harm.iHarmPlot(i),:),unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:)))),'g.-');
+        hSuccess{1}(i,j)  = plot(ax{1}(i,j),A,abs(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:))),'g.-');
+        hSuccess{2}(i,j)  = plot(ax{2}(i,j),A,unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:)))),'g.-');
         
         for k = 1:2
             hWarn{k}(i,j) = plot(ax{k}(i,j),NaN,NaN,'b.');
@@ -115,7 +107,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
         end
         
         if j==length(problem.iDofPlot)
-            xlabel(ax{1}(i,j),'\omega (rads)')
+            xlabel(ax{1}(i,j),'A (-)')
         end
         if j==1
             title(ax{1}(i,j),harmonicName(hbm,i))
@@ -171,59 +163,82 @@ if isempty(s)
     s = '0';
 end
 
-function [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A)
+function [xlin, Alin] = getLinearReponse(hbm,problem,X,w0)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
 w0 = w0*hbm.harm.rFreqRatio;
 wB = w0.*hbm.harm.rFreqBase;
 NHarm = hbm.harm.NHarm;
 Nfft = hbm.harm.Nfft;
 
+Alin = linspace(problem.A0,problem.AEnd,1000);
+
 w = hbm.harm.kHarm*wB';
 x0 = X(1,:).';
-U = A*feval(problem.excite,hbm,problem,w0);
-u0 = U(1,:).';
+U = feval(problem.excite,hbm,problem,w0);
 
-States = hbm_states3d(w0,X,U,hbm);
+%compute the fourier coefficients of the derivatives
+Wx = repmat(1i*w,1,size(X,2));
+Xdot  = X.*Wx;
+Xddot = Xdot.*Wx;
+
+%precompute the external inputs
+Wu = repmat(1i*w,1,size(U,2));
+Udot  = U.*Wu;
+Uddot = Udot.*Wu;
+
+x     = freq2time3d(X,NHarm,hbm.harm.iSub,Nfft);
+xdot  = freq2time3d(Xdot,NHarm,hbm.harm.iSub,Nfft);
+xddot = freq2time3d(Xddot,NHarm,hbm.harm.iSub,Nfft);
+
+%create the vector of inputs
+u     = freq2time3d(U,NHarm,hbm.harm.iSub,Nfft);
+udot  = freq2time3d(Udot,NHarm,hbm.harm.iSub,Nfft);
+uddot = freq2time3d(Uddot,NHarm,hbm.harm.iSub,Nfft);
+
+% %create the time series from the fourier series
+% x     = repmat(x0,1,prod(Nfft))';
+% xdot  = 0*x;
+% xddot = 0*x;
+% 
+% %create the vector of inputs
+% u     = repmat(u0,1,prod(Nfft))';
+% udot  = 0*u;
+% uddot = 0*u;
 
 %work out the time vector
 t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wB(1);
 t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
 [t1,t2] = ndgrid(t1,t2);
-States.t = [t1(:) t2(:)].';
+t = [t1(:) t2(:)];
 
-States.f = feval(problem.model,'nl',States,hbm,problem);
+xlin = zeros(hbm.harm.NFreq,problem.NDof,length(Alin));
 
-[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
-[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States,hbm,problem);
+%now loop over all the amplitudes
 
-K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
-Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
+for i = 1:length(Alin)
+    f0 = feval(problem.model,'nl',t',x',xdot',xddot',Alin(i)*u',Alin(i)*udot',Alin(i)*uddot',hbm,problem,w0).';
 
-M  = problem.M + M_nl;
-C  = problem.C + C_nl;
-K  = problem.K + K_nl;
+    [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,Alin(i)*u,Alin(i)*udot,Alin(i)*uddot,f0,hbm,problem,w0);
+    [Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,Alin(i)*u,Alin(i)*udot,Alin(i)*uddot,f0,hbm,problem,w0);
 
-Mu = problem.Mu + Mu_nl;
-Cu = problem.Cu + Cu_nl;
-Ku = problem.Ku + Ku_nl;
+    K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
+    Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
 
-%now loop over all the frequencies
-wlin = linspace(problem.wMin,problem.wMax,1000);
-xlin = zeros(hbm.harm.NFreq,problem.NDof,length(wlin));
+    M  = problem.M + M_nl;
+    C  = problem.C + C_nl;
+    K  = problem.K + K_nl;
 
-NFreq = hbm.harm.NFreq;
+    Mu = problem.Mu + Mu_nl;
+    Cu = problem.Cu + Cu_nl;
+    Ku = problem.Ku + Ku_nl;
 
-%work out frequencies
-w = getfrequencies(wlin,hbm);
-for i = 1:length(wlin)
-    w0 = wlin(i);
-    
-    U = A*feval(problem.excite,hbm,problem,w0);
+    NFreq = hbm.harm.NFreq;
     
     for k = 1:NFreq
-        Fe = (Ku + 1i*w(k,i)*Cu - w(k,i)^2*Mu)*U(k,:).';
-        H = K + 1i*w(k,i)*C - w(k,i)^2 * M;
+        Fe = (Ku + 1i*w(k)*Cu - w(k)^2*Mu)*Alin(i)*U(k,:).';
+        H = K + 1i*w(k)*C - w(k)^2 * M;
         xlin(k,:,i) = (H\Fe).';
     end
 end
+
 xlin(1,:,:) = xlin(1,:,:) + x0.';
