@@ -185,12 +185,6 @@ u0 = U(1,:).';
 
 States = hbm_states3d(w0,X,U,hbm);
 
-%work out the time vector
-t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wB(1);
-t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
-[t1,t2] = ndgrid(t1,t2);
-States.t = [t1(:) t2(:)].';
-
 States.f = feval(problem.model,'nl',States,hbm,problem);
 
 [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);

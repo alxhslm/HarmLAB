@@ -176,24 +176,7 @@ w = hbm.harm.kHarm*wB';
 x0 = X(1,:).';
 U = feval(problem.excite,hbm,problem,w0);
 
-%compute the fourier coefficients of the derivatives
-Wx = repmat(1i*w,1,size(X,2));
-Xdot  = X.*Wx;
-Xddot = Xdot.*Wx;
-
-%precompute the external inputs
-Wu = repmat(1i*w,1,size(U,2));
-Udot  = U.*Wu;
-Uddot = Udot.*Wu;
-
-x     = freq2time3d(X,NHarm,hbm.harm.iSub,Nfft);
-xdot  = freq2time3d(Xdot,NHarm,hbm.harm.iSub,Nfft);
-xddot = freq2time3d(Xddot,NHarm,hbm.harm.iSub,Nfft);
-
-%create the vector of inputs
-u     = freq2time3d(U,NHarm,hbm.harm.iSub,Nfft);
-udot  = freq2time3d(Udot,NHarm,hbm.harm.iSub,Nfft);
-uddot = freq2time3d(Uddot,NHarm,hbm.harm.iSub,Nfft);
+States = hbm_states3d(w0,X,U,hbm);
 
 % %create the time series from the fourier series
 % x     = repmat(x0,1,prod(Nfft))';
@@ -205,21 +188,16 @@ uddot = freq2time3d(Uddot,NHarm,hbm.harm.iSub,Nfft);
 % udot  = 0*u;
 % uddot = 0*u;
 
-%work out the time vector
-t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wB(1);
-t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
-[t1,t2] = ndgrid(t1,t2);
-t = [t1(:) t2(:)];
-
 xlin = zeros(hbm.harm.NFreq,problem.NDof,length(Alin));
 
 %now loop over all the amplitudes
 
 for i = 1:length(Alin)
-    f0 = feval(problem.model,'nl',t',x',xdot',xddot',Alin(i)*u',Alin(i)*udot',Alin(i)*uddot',hbm,problem,w0).';
+    States_i = scale_inputs(States,Alin(i));
+    States_i.f = feval(problem.model,'nl',States_i,hbm,problem);
 
-    [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,Alin(i)*u,Alin(i)*udot,Alin(i)*uddot,f0,hbm,problem,w0);
-    [Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,Alin(i)*u,Alin(i)*udot,Alin(i)*uddot,f0,hbm,problem,w0);
+    [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States_i,hbm,problem);
+    [Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States_i,hbm,problem);
 
     K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
     Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
@@ -242,3 +220,9 @@ for i = 1:length(Alin)
 end
 
 xlin(1,:,:) = xlin(1,:,:) + x0.';
+
+function States = scale_inputs(States,A)
+f = {'u','udot','uddot'};
+for i = 1:length(f)
+    States.(f{i}) = States.(f{i}) * A;
+end
