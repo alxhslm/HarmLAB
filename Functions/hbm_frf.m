@@ -162,9 +162,9 @@ switch hbm.cont.method
         fprintf('\n')       
         
         Xprev = [x0; w0]./problem.Xscale;
-        F = hbm_pseudo_constraints(Xprev,hbm,problem,A);
-        J = hbm_pseudo_jacobian(Xprev,hbm,problem,A);
-        tangent_prev = pseudo_null(J);
+        F = hbm_frf_constraints(Xprev,hbm,problem,A);
+        J = hbm_frf_jacobian(Xprev,hbm,problem,A);
+        tangent_prev = get_tangent(J);
         tangent_prev = tangent_prev * sign(tangent_prev(end)) * sign(wEnd - w0);
         t0 = tangent_prev.*problem.Xscale;
         t = t0; tCurr = t0;
@@ -200,8 +200,8 @@ switch hbm.cont.method
                     X = Xpred;
                     while num_iter <= hbm.cont.predcorr.maxit
                         Xlast = X;
-                        J = hbm_pseudo_jacobian(X,hbm,problem,A);
-                        F = hbm_pseudo_constraints(X,hbm,problem,A);
+                        J = hbm_frf_jacobian(X,hbm,problem,A);
+                        F = hbm_frf_constraints(X,hbm,problem,A);
                         if hbm.cont.predcorr.bMoorePenrose
                             X = Xlast - J\F;
                         else
@@ -219,7 +219,7 @@ switch hbm.cont.method
                         end
                     end
                     if hbm.cont.predcorr.bMoorePenrose
-                        tangent = pseudo_null(J);
+                        tangent = get_tangent(J);
                         tangent = sign(tangent'*tangent_prev)*tangent;
                     end
                 case 'arclength'
@@ -235,7 +235,7 @@ switch hbm.cont.method
                             bConverged = status == 1;
                     end
                     J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step);
-                    tangent = pseudo_null(J(1:end-1,:));
+                    tangent = get_tangent(J(1:end-1,:));
                     tangent = sign(tangent'*tangent_prev)*tangent;
             end
 
@@ -471,13 +471,8 @@ results = struct('X',X,...
     'err',err,...
     'debug',debug);
 
-function y = norm2(x)
-y = sqrt(sum(x.^2,1));
 
-function y = normalise(x)
-scale = repmat(norm2(x),size(x,1),1);
-y = x ./scale;
-
+%% Predictor
 function X_extrap = polynomial_predictor(X,dX,s_extrap)
 s = norm2(diff(X,[],2));
 s = cumsum([0 s]);
@@ -506,14 +501,8 @@ for i = 1:N
     end
 end
 
-%% Pseudo functions
-
-function t = pseudo_null(A)
-[U,S,V] = svd(A,0);
-t = V(:,end);
-t = t./norm(t);
-
-function c = hbm_pseudo_constraints(X,hbm,problem,A)
+%% Constraints and Jacobian
+function c = hbm_frf_constraints(X,hbm,problem,A)
 %unpack the inputs
 x = X(1:end-1).*problem.xscale;
 w0 = X(end).*problem.wscale;
@@ -526,10 +515,7 @@ u = packdof(U);
 c = hbm_balance3d('func',hbm,problem,w0,u,x);
 c = c ./ problem.Fscale;
 
-function J = hbm_pseudo_jacobian(X,hbm,problem,A)
-% J = jacobian(@hbm_pseudo_constraints,X,hbm,problem,A);
-% return;
-
+function J = hbm_frf_jacobian(X,hbm,problem,A)
 %unpack the inputs
 x = X(1:end-1).*problem.xscale;
 w0 = X(end).*problem.wscale;
@@ -543,59 +529,25 @@ Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
 Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 
 J = [Jx Dw];
-
-% hbm.options.bAnalyticalDerivs = false;
-% Jx2 = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-% Dw2 = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-% J2 = [Jx2 Dw2];
-
 J = J .* problem.Jscale;
 
-
 %% Arclength files
-function [f,J] = hbm_arclength_constraints(X,hbm,problem,A,Xprev,tangent_prev,step)
-x = X(1:end-1).*problem.xscale;
-w0 = X(end).*problem.wscale;
-
-w0 = w0 * hbm.harm.rFreqRatio;
-
-U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(U);
-
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
-c = c ./ problem.Fscale;
-
+function [c,J] = hbm_arclength_constraints(X,hbm,problem,A,Xprev,tangent_prev,step)
+c = hbm_frf_constraints(X,hbm,problem,A);
 sgn = sign((X - Xprev)' * tangent_prev);
 s = norm(X - Xprev) * sgn;
-f = [c;
-    s - step];
-
+c(end+1) = s - step;
 if nargout > 1
     J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step);
 end
 
 function J = hbm_arclength_jacobian(X,hbm,problem,A,Xprev,tangent_prev,step)
-x = X(1:end-1).*problem.xscale;
-w0 = X(end).*problem.wscale;
-
-w0 = w0 * hbm.harm.rFreqRatio;
-
-U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(U);
-
+J = hbm_frf_jacobian(X,hbm,problem,A);
 sgn = sign((X - Xprev)' * tangent_prev);
-
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-
-J = [Jx Dw];
-J = J .*problem.Jscale;
-
-J(end+1,:) = sgn*((X - Xprev)'+eps)/(1*(norm(X - Xprev)+eps)); %length(X)
+J(end+1,:) = sgn*((X - Xprev)'+eps)/(1*(norm(X - Xprev)+eps));
 
 %% Coco functions
-
-function [data res] = hbm_coco_callback(prob, data, command, varargin)
+function [data, res] = hbm_coco_callback(prob, data, command, varargin)
 hbm = data.hbm;
 problem = data.problem;
 A = data.A;
@@ -603,7 +555,6 @@ step = prob.cont.arc_alpha;
 
 switch command
     case 'init'
-        res = {};
         x0 = prob.efunc.x0(1:end-1).*problem.xscale;
         w0 = prob.efunc.x0(end).*problem.wscale;
         hbm_frf_plot('init',hbm,problem,x0,w0,A);
@@ -612,56 +563,25 @@ switch command
         x = chart.x(1:end-2).*problem.xscale;
         w = chart.x(end).*problem.wscale;
         hbm_frf_plot('data',hbm,problem,x,w,A);
-        res = {};
 end
 
+res = {};
+
 function [data,c] = hbm_coco_constraints(prob, data, u)
-hbm = data.hbm;
-problem = data.problem;
-A = data.A;
-
-x = u(1:end-1).*problem.xscale;
-w0 = u(end).*problem.wscale;
-
-w0 = w0 * hbm.harm.rFreqRatio;
-
-U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(U);
-
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
-c = c ./ problem.Fscale;
-
+c = hbm_frf_constraints(u,data.hbm,data.problem,data.A);
 
 function [data, J] = hbm_coco_jacobian(prob, data, u)
-hbm = data.hbm;
-problem = data.problem;
-A = data.A;
+J = hbm_frf_jacobian(u,data.hbm,data.problem,data.A);
 
-x = u(1:end-1).*problem.xscale;
-w0 = u(end).*problem.wscale;
+%% Utilities
+function y = norm2(x)
+y = sqrt(sum(x.^2,1));
 
-w0 = w0 * hbm.harm.rFreqRatio;
+function y = normalise(x)
+scale = repmat(norm2(x),size(x,1),1);
+y = x ./scale;
 
-U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(U);
-
-%multiple fundamental
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-
-J = [Jx Dw];
-
-% hbm.options.bAnalyticalDerivs = false;
-% Jx2 = hbm_balance('jacob',hbm,problem,w0,u,x);
-% Dw2 = hbm_balance('derivW',hbm,problem,w0,u,x);
-% J2 = [Jx2 Dw2];
-%
-% if max(abs(Dw -Dw2)) > 1E-4
-%     keyboard
-% end
-%
-% if max(abs(Jx(:) - Jx2(:))) > 1E-4
-%     keyboard
-% end
-
-J = J .*problem.Jscale;
+function t = get_tangent(J)
+[U,S,V] = svd(J,0);
+t = V(:,end);
+t = t./norm(t);
