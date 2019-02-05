@@ -95,7 +95,7 @@ sol.F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
 sol.H = hbm_objective('complex',hbm,problem,w,x,u);
 
 %floquet multipliers
-sol.L = floquetMultipliers(hbm,problem,w,u,x);
+sol.L = hbm_floquet(hbm,problem,w,u,x);
 
 sol.it = iter;
 

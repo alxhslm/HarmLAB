@@ -82,7 +82,7 @@ sol.U = U;
 sol.A = A;
 
 %floquet multipliers
-sol.L = floquetMultipliers(hbm,problem,w,u,x);
+sol.L = hbm_floquet(hbm,problem,w,u,x);
 
 sol.it = iter;
 

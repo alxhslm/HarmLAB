@@ -447,7 +447,7 @@ F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
 
 for i = 1:NPts
     w0 = w(i)*hbm.harm.rFreqRatio;
-    lambda(:,i) = floquetMultipliers(hbm,problem,w0,u(:,i),x(:,i));
+    lambda(:,i) = hbm_floquet(hbm,problem,w0,u(:,i),x(:,i));
 end
 
 results = struct('X',X,...

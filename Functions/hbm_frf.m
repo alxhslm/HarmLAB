@@ -454,7 +454,7 @@ if ~exist('lambda','var')
     lambda = zeros(2*size(x,1),NPts);
     for i = 1:NPts
         w0 = w(i)*hbm.harm.rFreqRatio;
-        lambda(:,i) = floquetMultipliers(hbm,problem,w0,u(:,i),x(:,i));
+        lambda(:,i) = hbm_floquet(hbm,problem,w0,u(:,i),x(:,i));
     end
 end
 
