@@ -1,4 +1,4 @@
-function sol = hbm_resonance(hbm,problem,w0,A,xIn)
+function sol = hbm_res(hbm,problem,w0,A,xIn)
 NDof = problem.NDof;
 Nfft  = hbm.harm.Nfft;
 
