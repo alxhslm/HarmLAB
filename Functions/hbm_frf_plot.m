@@ -1,4 +1,4 @@
-function hbm_frf_plot(command,hbm,problem,x,w0,A)
+function hbm_frf_plot(command,hbm,problem,results)
 persistent fig hSuccess hWarn hErr X W
 if hbm.cont.bUpdate
     switch command
@@ -7,24 +7,27 @@ if hbm.cont.bUpdate
                 close(fig)
             end
                           
-            if isempty(x) || isempty(w0)
-                X = zeros(hbm.harm.NFreq,problem.NDof);
-                w0 = NaN;
+            if isempty(results)
+                Xi = zeros(hbm.harm.NFreq,problem.NDof);
+                wi = NaN;
             else
-                X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+                Xi = results.X;
+                wi = results.w;
             end
-            W = getfrequencies(w0,hbm);
-            [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A);
+            W = getfrequencies(wi,hbm);
+            X = Xi;
+            
+            [xlin, wlin] = getLinearReponse(hbm,problem,X,wi,results.A);
             [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
 
         case {'data','err','warn'}
             if ~ishandle(fig(1))
-                [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),A);
+                [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),results.A);
                 [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
             end
             
-            X(:,:,end+1) = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-            W(:,end+1) = getfrequencies(w0,hbm);
+            X(:,:,end+1) = results.X;
+            W(:,end+1) = getfrequencies(results.w,hbm);
             Xabs = abs(X); Xabs = Xabs(:,:,end);
             Xph = unwrap(angle(X)); Xph = Xph(:,:,end);
             Wfreq = W(:,end);

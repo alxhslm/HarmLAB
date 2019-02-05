@@ -1,6 +1,6 @@
-function Op = hbm_output3d(hbm,problem,w0,u,x)
+function o = hbm_output3d(hbm,problem,w0,u,x)
 if hbm.options.bUseStandardHBM
-    Op = hbm_output(hbm,problem,w0(1),u,x);
+    o = hbm_output(hbm,problem,w0(1),u,x);
     return;
 end
 
@@ -14,10 +14,15 @@ Nfft   = hbm.harm.Nfft;
 
 iRetain = hbm.harm.iRetain;
 
-%work out the time domain
-X = unpackdof(x,NFreq-1,NDof,iRetain);
-U = unpackdof(u,NFreq-1,NInput);
+if isvector(x)
+    X = unpackdof(x,NFreq-1,NDof,iRetain);
+    U = unpackdof(u,NFreq-1,NInput);
+else
+    X = x;
+    U = u;
+end
 
+%work out the time domain
 States = hbm_states3d(w0,X,U,hbm);
 
 %push through the nl system
@@ -33,4 +38,8 @@ switch hbm.options.aft_method
         O = hbm.nonlin.FFT*o.';
 end
 
-Op = packdof(O);
+if isvector(x)
+    o = packdof(O);
+else
+    o = O;
+end

@@ -1,4 +1,4 @@
-function hbm_amp_plot(command,hbm,problem,x,a)
+function hbm_amp_plot(command,hbm,problem,results)
 persistent fig hSuccess hWarn hErr X A
 w0 = problem.w0;
 
@@ -9,12 +9,12 @@ if hbm.cont.bUpdate
                 close(fig)
             end
                           
-            if isempty(x) || isempty(A)
+            if isempty(results)
                 X = zeros(hbm.harm.NFreq,problem.NDof);
                 A = NaN;
             else
-                X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-                A = a;
+                X = results.X;
+                A = results.A;
             end
             [xlin, Alin] = getLinearReponse(hbm,problem,X,w0);
             [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,A,xlin,Alin);
@@ -25,17 +25,18 @@ if hbm.cont.bUpdate
                 [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,A,xlin,Alin);
             end
             
-            X(:,:,end+1) = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-            A(:,end+1) = a;
+            X(:,:,end+1) = results.X;
+            A(:,end+1) = results.A;
             Xabs = abs(X); Xabs = Xabs(:,:,end);
             Xph = unwrap(angle(X)); Xph = Xph(:,:,end);
+            Aplot = A(end);
             if any(strcmpi(command,{'data','warn'}))
-                update_handles(hSuccess,Xabs,Xph,a,hbm,problem)
+                update_handles(hSuccess,Xabs,Xph,Aplot,hbm,problem)
                 %update our progress
                 
                 if strcmpi(command,'warn')
                     %warning, overlay in blue
-                    update_handles(hWarn,Xabs,Xph,a,hbm,problem)
+                    update_handles(hWarn,Xabs,Xph,Aplot,hbm,problem)
                 end
                 
                 %reset the error points
@@ -51,7 +52,7 @@ if hbm.cont.bUpdate
                 %error
                 X(:,:,end) = [];
                 A(:,end) = [];
-                update_handles(hErr,Xabs,Xph,a,hbm,problem)
+                update_handles(hErr,Xabs,Xph,Aplot,hbm,problem)
             end
 
             drawnow

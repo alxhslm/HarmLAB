@@ -4,6 +4,11 @@ if any(isnan(x) | isinf(x))
     return
 end
 
+if ~isvector(x)
+    x = packdof(x,hbm.harm.iRetain);
+    u = packdof(u);
+end
+
 [A,B] = floquetMatrices(hbm,problem,w0,u,x);
 lambda = eig(A,B,'vector');
 [~,iSort] = sort(abs(imag(lambda)));

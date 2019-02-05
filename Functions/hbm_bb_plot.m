@@ -1,4 +1,4 @@
-function varargout = hbm_bb_plot(command,hbm,problem,a,h,w)
+function varargout = hbm_bb_plot(command,hbm,problem,results)
 persistent figBB axBB hBB hWaitbar A H W
 if hbm.cont.bUpdate
     switch command
@@ -12,9 +12,9 @@ if hbm.cont.bUpdate
                 hWaitbar = [];
             end
             
-            A = a;
-            W = w;
-            H = h;
+            A = results.A;
+            W = results.w;
+            H = abs(results.H);
             [figBB,axBB,hBB] = createFig(hbm,problem,A,H,W);        
             hWaitbar = waitbar(0, 'Amplitude Range');
             if nargout > 0
@@ -29,9 +29,9 @@ if hbm.cont.bUpdate
                 [figBB,axBB,hBB] = createFig(hbm,problem,A,H,W);
             end
             if strcmp(command,'data')
-                A(end+1) = a;
-                H(end+1) = h;
-                W(end+1) = w;
+                A(end+1) = results.A;
+                H(end+1) = abs(results.H);
+                W(end+1) = results.w;
                 [A,isort] = sort(A);
                 H = H(isort); W = W(isort);
                 set(hBB(1),'xdata',A,'ydata',W);
@@ -41,10 +41,10 @@ if hbm.cont.bUpdate
                 if ~ishandle(hWaitbar)
                      hWaitbar = waitbar(0, 'Amplitude Range');
                 end
-                waitbar((a-problem.A0)/(problem.AEnd - problem.A0),hWaitbar);
+                waitbar((results.A-problem.A0)/(problem.AEnd - problem.A0),hWaitbar);
             else
-                plot(axBB(1),a,w,'r.')
-                plot(axBB(2),a,h,'r.')
+                plot(axBB(1),results.A,results.w,'r.')
+                plot(axBB(2),results.A,abs(results.H),'r.')
             end
             drawnow
         case 'close'
