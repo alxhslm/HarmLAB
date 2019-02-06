@@ -2,7 +2,7 @@ function [results,curr] = hbm_bb(hbm,problem,A0,w0,X0,AEnd,wEnd,XEnd)
 problem.type = 'bb';
 
 %first solve @ A0,w0
-sol = hbm_resonance(hbm,problem,w0,A0,X0);
+sol = hbm_res(hbm,problem,w0,A0,X0);
 x0 = packdof(sol.X,hbm.harm.iRetain);
 if any(isnan(abs(x0(:))))
     error('Failed to solve initial problem')
@@ -14,7 +14,7 @@ init.H = sol.H;
 init.w = sol.w;
 init.A = A0;
 
-sol = hbm_solve(hbm,problem,w0,AEnd,XEnd);
+sol = hbm_res(hbm,problem,w0,AEnd,XEnd);
 xEnd = packdof(sol.X,hbm.harm.iRetain);
 if any(isnan(abs(xEnd(:))))
     error('Failed to solve final problem')
@@ -95,7 +95,7 @@ switch hbm.cont.method
             xpred = zpred(1:end-2);
             wpred = zpred(end-1);
             Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-            sol = hbm_resonance(hbm,problem,wpred,Apred,Xpred);
+            sol = hbm_res(hbm,problem,wpred,Apred,Xpred);
             sol.x = packdof(sol.X);
             
             z = [sol.x; sol.w; sol.A];

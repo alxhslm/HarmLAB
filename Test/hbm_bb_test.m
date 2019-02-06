@@ -73,7 +73,7 @@ for i = 1:length(As)
     plot(ax(2),w,unwrap(angle(H),[],2));
     
     [~,ii] = max(H);
-    sol = hbm_resonance(hbm,problem,w(ii),As(i),x(:,:,ii));
+    sol = hbm_res(hbm,problem,w(ii),As(i),x(:,:,ii));
     Xres(:,:,i) = sol.X;
     wres(i) = sol.w;
     plot(ax(1),sol.w,abs(sol.H),'o')

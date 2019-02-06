@@ -1,4 +1,4 @@
-function lambda = floquetMultipliers(hbm,problem,w0,u,x)
+function lambda = hbm_floquet(hbm,problem,w0,u,x)
 if any(isnan(x) | isinf(x))
     lambda = NaN(hbm.harm.NComp*2*problem.NDof,1);
     return

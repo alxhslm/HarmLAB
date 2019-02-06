@@ -1,4 +1,4 @@
-function sol = hbm_resonance(hbm,problem,w,A,X0)
+function sol = hbm_res(hbm,problem,w,A,X0)
 problem.type = 'resonance';
 
 NDof = problem.NDof;
@@ -89,7 +89,7 @@ sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
 %floquet multipliers & objective
 u = packdof(sol.U);
 sol.H = hbm_objective('complex',hbm,problem,w0,x,u);
-sol.L = floquetMultipliers(hbm,problem,w0,u,x);
+sol.L = hbm_floquet(hbm,problem,w0,u,x);
 
 sol.it = iter;
 
