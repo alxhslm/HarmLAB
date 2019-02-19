@@ -29,15 +29,19 @@ If the base frequency is allowed to vary, and chosen to satisfy an objective, th
 * ```hbm_bb```: The excitation amplitude is the continuation parameter, and the base frequency is chosen to satisfy the objective. This yields the 'optimal' response over a range of amplitudes. For example, this can used to compute the backbone curve.
 
 ## Solvers
-This toolbox can interface with two different optimisation toolboxed:
+This toolbox can interface with two different optimisation toolboxes:
 
 * IPOPT through a custom wrapper ```fipopt```
 * The inbuilt MATLAB optimisers ```fsolve``` and ```fmincon```
 
-For the continuation problems, three different continuation algorithm can be used:
+For the continuation problems, two different continuation toolboxes can be used:
 
-* Pseudo-arc length continuation
-* Arc-length continutation
-* Using the 'ep' toolbox from ```coco```
+* Predictor-corrector algorithm from this toolbox
+* The ```ep``` toolbox from the third-party continuation toolbox ```coco```
 
-Analytical jacbobians have been provided throughout to speed up the execution.
+For the predictor-corrector algorithm, two different types of corrector can be used:
+
+* Pseudo-arc length with Moore-penrose Inverse corrections
+* Arc-length using either ```fipopt``` or ```fsolve``` to find the solution
+
+Analytical jacbobians have been implemented throughout to speed up the execution.
