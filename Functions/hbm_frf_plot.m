@@ -68,6 +68,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
         w = [get(han{1}(i,j),'xdata'),W(hbm.harm.iHarmPlot(i),:)];
         mag = [get(han{1}(i,j),'ydata'),permute(Xabs(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
         ph  = [get(han{2}(i,j) ,'ydata'),permute(Xph(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
+        ph  = unwrap(ph);
         set(han{1}(i,j),'xdata',w,'ydata',mag);
         set(han{2}(i,j) ,'xdata',w,'ydata',ph);
     end
@@ -103,7 +104,7 @@ end
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:length(problem.iDofPlot)
         hSuccess{1}(i,j)  = plot(ax{1}(i,j),w(hbm.harm.iHarmPlot(i),:),abs(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:))),'g.-');
-        hSuccess{2}(i,j)  = plot(ax{2}(i,j),w(hbm.harm.iHarmPlot(i),:),unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:)))),'g.-');
+        hSuccess{2}(i,j)  = plot(ax{2}(i,j),w(hbm.harm.iHarmPlot(i),:),unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:)))),'m.-');
         
         for k = 1:2
             hWarn{k}(i,j) = plot(ax{k}(i,j),NaN,NaN,'b.');
