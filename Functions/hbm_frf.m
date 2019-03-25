@@ -4,19 +4,32 @@ NDof = problem.NDof;
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w0,A,x0);
 x0 = packdof(sol.X,hbm.harm.iRetain);
-if any(isnan(abs(x0(:))))
-    error('Failed to solve initial problem')
-end
 u0 = packdof(sol.U);
 f0 = packdof(sol.F);
+if any(isnan(abs(x0(:))))
+    results = struct('X',x0,...
+    'A',A,...
+    'U',u0,...
+    'F',f0,...
+    'w',w0,...
+    'err','Failed to solve initial problem');
+    return;
+end
 
 sol = hbm_solve(hbm,problem,wEnd,A,xEnd);
 xEnd = packdof(sol.X,hbm.harm.iRetain);
-if any(isnan(abs(xEnd(:))))
-    error('Failed to solve final problem')
-end
 uEnd = packdof(sol.U);
 fEnd = packdof(sol.F);
+if any(isnan(abs(xEnd(:))))
+    results = struct('X',xEnd,...
+    'A',A,...
+    'U',uEnd,...
+    'F',fEnd,...
+    'w',wEnd,...
+    'err','Failed to solve final problem');
+    return;
+end
+
 
 hbm.bIncludeNL = 1;
 
@@ -121,8 +134,6 @@ switch hbm.cont.method
         it = []; itCurr = [];
         flag = {};
         
-        Xprev = [x0; w0]./problem.Xscale;
-
         num_step = 1;
         num_iter = 0;
         num_fail = 0;
