@@ -8,7 +8,11 @@ hbm.harm.Nfft = 32;
 hbm.options.bUseStandardHBM = true;
 hbm.dependence.x = true;
 hbm.dependence.xdot  = true;
-hbm.dependence.w = false;
+hbm.dependence.xddot  = true;
+hbm.dependence.u = true;
+hbm.dependence.udot  = true;
+hbm.dependence.uddot  = true;
+hbm.dependence.w = true;
 
 hbm.options.bAnalyticalDerivs = true;
 hbm.options.aft_method = 'mat';

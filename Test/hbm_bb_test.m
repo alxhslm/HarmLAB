@@ -48,12 +48,15 @@ ylabel('\angle F (deg)');
 linkaxes(ax,'x')
 xlim([w0,wEnd]);
 
-As = [1 3 10 30];
+As = [1 2 3 10 30];
 
 for i = 1:length(As)
     file = [fileparts(which(mfilename)) filesep 'FRF_' sprintf('A = %0.1f',As(i)) '.mat'];
     if ~isfile(file)
-        results = hbm_frf(hbm,problem,As(i),w0,[],wEnd,[]);
+        sol = hbm_frf(hbm,problem,As(i),w0,[],wEnd,[]);
+        results.X = cat(3,sol.X);
+        results.U = cat(3,sol.U);
+        results.w = cat(2,sol.w);
         save(file,'-struct','results');
     else
         results = load(file);
@@ -72,9 +75,9 @@ for i = 1:length(As)
     [~,ii] = max(H);
     sol = hbm_res(hbm,problem,w(ii),As(i),x(:,:,ii));
     Xres(:,:,i) = sol.X;
-    wres(i) = sol.w0;
-    plot(ax(1),sol.w0,abs(sol.H),'o')
-    plot(ax(2),sol.w0,angle(sol.H),'o')
+    wres(i) = sol.w;
+    plot(ax(1),sol.w,abs(sol.H),'o')
+    plot(ax(2),sol.w,angle(sol.H),'o')
     drawnow
 end
 
@@ -82,9 +85,13 @@ bb = hbm;
 bb.cont.method = 'none';
 
 A0 = As(1);     w0 = wres(1);     X0 = Xres(:,:,1);
-Aend = As(end); wEnd = wres(end); XEnd = Xres(:,:,end);
+Aend = As(2); wEnd = wres(2); XEnd = Xres(:,:,2);
 tic;
 sol = hbm_bb(bb,problem,A0,w0,X0,Aend,wEnd,XEnd);
+results.X = cat(3,sol.X);
+results.U = cat(3,sol.U);
+results.w = cat(2,sol.w);
+results.H = cat(2,sol.H);
 toc;
-plot(ax(1),sol.w,abs(sol.H));
-plot(ax(2),sol.w,unwrap(angle(sol.H),[],2));
+plot(ax(1),results.w,abs(results.H));
+plot(ax(2),results.w,unwrap(angle(results.H),[],2));

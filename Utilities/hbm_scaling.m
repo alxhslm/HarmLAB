@@ -1,5 +1,8 @@
-function problem = hbm_scaling(problem,hbm,x,w,A)
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+function problem = hbm_scaling(problem,hbm,results)
+X = results.X;
+w = results.w;
+A = results.A;
+
 tol = hbm.scaling.tol;
 switch hbm.scaling.method
     case 'max'
@@ -12,27 +15,32 @@ switch hbm.scaling.method
 end
 xscale = [xdc; xharm*(1+1i)];
 problem.xscale = packdof(xscale,hbm.harm.iRetain);
-problem.Xscale = problem.xscale;
+problem.Zscale = problem.xscale;
 problem.Fscale = ones(length(problem.xscale),1);
 
-if nargin > 3 && ~isempty(w)
-    %frf,resonance, or bb
-    problem.wscale = w;
-    problem.Xscale(end+1) = w;
-end
-
-if nargin > 4
-    %bb or amp
-    problem.Ascale = A;
-    problem.Xscale(end+1) = A;
-    
-    if ~isempty(w)
-        %bb - need extra resonance condition
+switch problem.type
+    case 'frf'
+        problem.wscale = w;
+        problem.Zscale(end+1) = w;
+    case 'resonance'
+        problem.wscale = w;
+        problem.Zscale(end+1) = w;
+    case 'bb'
+        problem.wscale = w;
+        problem.Zscale(end+1) = w;
+        
+        %amplitude is the continuation variable
+        problem.Ascale = A;
+        problem.Zscale(end+1) = A;
+        %need extra constraint
         problem.Fscale(end+1) = 1;
-    end
+    case 'amp'
+        problem.Ascale = A;
+        problem.Zscale(end+1) = A;
+    case 'solve'
 end
-
-problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
+   
+problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 
 % %from solve
 % X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
@@ -56,8 +64,8 @@ problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 % problem.xscale = packdof(xscale,hbm.harm.iRetain);
 % problem.wscale = w;
 % problem.Fscale = x*0+1;
-% problem.Xscale = [problem.xscale; problem.wscale];
-% problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
+% problem.Zscale = [problem.xscale; problem.wscale];
+% problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 % 
 % %from resonnace
 % X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
@@ -68,8 +76,8 @@ problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 % problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
 % problem.Fscale = x*0+1;
 % problem.wscale = w0;
-% problem.Xscale = [problem.xscale; problem.wscale];
-% problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
+% problem.Zscale = [problem.xscale; problem.wscale];
+% problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 % 
 % %from bb
 % X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
@@ -82,5 +90,5 @@ problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
 % problem.wscale = 1;%w;
 % problem.Ascale = 1E-4;%A;
 % problem.Fscale = ones(length(problem.xscale)+problem.constr.N,1);
-% problem.Xscale = [problem.xscale; problem.wscale; problem.Ascale];
-% problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
+% problem.Zscale = [problem.xscale; problem.wscale; problem.Ascale];
+% problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';

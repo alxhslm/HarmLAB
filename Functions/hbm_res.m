@@ -1,4 +1,6 @@
-function sol = hbm_res(hbm,problem,w0,A,xIn)
+function sol = hbm_res(hbm,problem,w,A,X0)
+problem.type = 'resonance';
+
 NDof = problem.NDof;
 Nfft  = hbm.harm.Nfft;
 
@@ -8,10 +10,14 @@ hbm.bIncludeNL = 1;
 NComp = hbm.harm.NComp;
 Nhbm  = hbm.harm.NRetain;
 
-% %first solve @ w0
-% x0 = hbm_solve(hbm,problem,w0,A,xIn);
-x0 = xIn;
-x0 = packdof(x0);
+%first solve @ w0
+sol = hbm_solve(hbm,problem,w,A,X0);
+X0 = sol.X;
+x0 = packdof(X0);
+
+init.X = X0;
+init.w = w;
+init.A = A;
 
 if isfield(problem,'xhscale')
     xdc  = problem.x0scale(:)';
@@ -19,15 +25,16 @@ if isfield(problem,'xhscale')
     xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
     problem.xscale = packdof(xscale,hbm.harm.iRetain);
     problem.Fscale = problem.xscale*0+1;
-    problem.wscale = w0;
-    problem.Xscale = [problem.xscale; problem.wscale];
+    problem.wscale = w;
+    problem.Zscale = [problem.xscale; problem.wscale];
 else
-    problem = hbm_scaling(problem,hbm,x0,w0);
+    problem = hbm_scaling(problem,hbm,init);
 end
 
-problem.Jscale = (1./problem.Fscale(:))*problem.Xscale(:)';
+problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 
-X0 = [x0; w0]./problem.Xscale;
+z0 = [x0; w];
+Z0 = z0./problem.Zscale;
 
 %and actually solve it
 hbm.max_iter = 4;
@@ -46,7 +53,7 @@ while ~bSuccess && attempts < hbm.max_iter
             fun_constr = @(x)hbm_fsolve_constr(x,hbm,problem,A);
             options = optimoptions('fmincon','SpecifyObjectiveGradient',true,'SpecifyConstraintGradient',true,'Display','iter',...
                 'OptimalityTolerance',opt_tol,'ConstraintTolerance',constr_tol,'MaxIterations',maxit);
-            [X,~,EXITFLAG,OUTPUT] = fmincon(fun_obj,X0,[],[],[],[],[],[],fun_constr,options);
+            [Z,~,EXITFLAG,OUTPUT] = fmincon(fun_obj,Z0,[],[],[],[],[],[],fun_constr,options);
             bSuccess = EXITFLAG == 1;
             iter = OUTPUT.iterations + 1;
         case 'ipopt'
@@ -57,51 +64,38 @@ while ~bSuccess && attempts < hbm.max_iter
             options.max_iter = maxit;
             options.tol = opt_tol;
             options.constr_viol_tol = constr_tol;
-            [X, info] = fipopt(@hbm_obj,X0,@hbm_constr,options,hbm,problem,A);           
+            [Z, info] = fipopt(@hbm_obj,Z0,@hbm_constr,options,hbm,problem,A);           
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
     end
-    X0 = X+rand(length(X),1)*1E-8;
+    Z0 = Z+rand(length(Z),1)*1E-8;
     attempts = attempts + 1;
 end
 if ~bSuccess
-    X = X + NaN;
+    Z = Z + NaN;
 end
+z = Z.*problem.Zscale;
 
-% obj = hbm_obj(X,hbm,problem,A);
-% G = hbm_grad(X,hbm,problem,A);
-% J = hbm_jacobian(X,hbm,problem,A);
-% F = hbm_constr(X,hbm,problem,A);
-% 
-% dHdw = G(end) - G(1:end-1)*(J(:,1:end-1)\J(:,end));
+w = abs(z(end));
+w0 = w*hbm.harm.rFreqRatio;
+x = z(1:end-1);
 
-w0 = abs(X(end).*problem.wscale);
-w = w0*hbm.harm.rFreqRatio;
-x = X(1:end-1).*problem.xscale;
-
-sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
-
-sol.w0 = w0;
 sol.w = w;
-
-sol.U = A*feval(problem.excite,hbm,problem,w0);
-u = packdof(sol.U);
-
 sol.A = A;
+sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
+sol.U = A*feval(problem.excite,hbm,problem,w0);
+sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
 
-f = hbm_output3d(hbm,problem,w,u,x);
-sol.F = unpackdof(f,hbm.harm.NFreq-1,problem.NOutput);
-
-sol.H = hbm_objective('complex',hbm,problem,w,x,u);
-
-%floquet multipliers
-sol.L = hbm_floquet(hbm,problem,w,u,x);
+%floquet multipliers & objective
+u = packdof(sol.U);
+sol.H = hbm_objective('complex',hbm,problem,w0,x,u);
+sol.L = hbm_floquet(hbm,problem,w0,u,x);
 
 sol.it = iter;
 
-function obj = hbm_obj(X,hbm,problem,A)
-x = X(1:end-1).*problem.xscale;
-w = X(end).*problem.wscale;
+function obj = hbm_obj(Z,hbm,problem,A)
+x = Z(1:end-1).*problem.xscale;
+w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio;
 
 U = A*feval(problem.excite,hbm,problem,w0);
@@ -110,9 +104,9 @@ u = packdof(U);
 H = hbm_objective('func',hbm,problem,w0,x,u);
 obj = - problem.res.sign * H;
 
-function G = hbm_grad(X,hbm,problem,A)
-x = X(1:end-1).*problem.xscale;
-w = X(end).*problem.wscale;
+function G = hbm_grad(Z,hbm,problem,A)
+x = Z(1:end-1).*problem.xscale;
+w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio;
 
 U = A*feval(problem.excite,hbm,problem,w0);
@@ -121,11 +115,11 @@ u = packdof(U);
 [Dx, Dw] = hbm_objective({'jacobX','derivW'},hbm,problem,w0,x,u);
 G = -problem.res.sign*[Dx Dw];
 
-G = G.*problem.Xscale(:)';
+G = G.*problem.Zscale(:)';
 
-function c = hbm_constr(X,hbm,problem,A)
-x = X(1:end-1).*problem.xscale;
-w = X(end).*problem.wscale;
+function c = hbm_constr(Z,hbm,problem,A)
+x = Z(1:end-1).*problem.xscale;
+w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio;
 
 U = A*feval(problem.excite,hbm,problem,w0);
@@ -133,9 +127,9 @@ u = packdof(U);
 
 c = hbm_balance3d('func',hbm,problem,w0,u,x);
 
-function J = hbm_jacobian(X,hbm,problem,A)
-x = X(1:end-1).*problem.xscale;
-w = X(end).*problem.wscale;
+function J = hbm_jacobian(Z,hbm,problem,A)
+x = Z(1:end-1).*problem.xscale;
+w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio;
 
 U = A*feval(problem.excite,hbm,problem,w0);
@@ -144,24 +138,23 @@ u = packdof(U);
 Jx_nl = hbm_balance3d('jacob',hbm,problem,w0,u,x);
 Dw_nl = hbm_balance3d('derivW',hbm,problem,w0,u,x);
 
-
 J = [Jx_nl  Dw_nl];
 J = J .* problem.Jscale;
 
-function [obj,G] = hbm_fsolve_obj(X,hbm,problem,A)
-obj = hbm_obj(X,hbm,problem,A);
+function [obj,G] = hbm_fsolve_obj(Z,hbm,problem,A)
+obj = hbm_obj(Z,hbm,problem,A);
 if nargout > 1
-    G =  hbm_grad(X,hbm,problem,A)';
+    G =  hbm_grad(Z,hbm,problem,A)';
 end
 
-function [c,ceq,Jc,Jceq] = hbm_fsolve_constr(X,hbm,problem,A)
-ceq = hbm_constr(X,hbm,problem,A);
+function [c,ceq,Jc,Jceq] = hbm_fsolve_constr(Z,hbm,problem,A)
+ceq = hbm_constr(Z,hbm,problem,A);
 c = [];
 % c = ceq(end);
 % ceq = ceq(1:end-1);
 if nargout > 2
-    Jceq = hbm_jacobian(X,hbm,problem,A);
-    Jc = zeros(0,length(X));
+    Jceq = hbm_jacobian(Z,hbm,problem,A);
+    Jc = zeros(0,length(Z));
     
     Jc = Jc';
     Jceq = Jceq';

@@ -1,4 +1,4 @@
-function hbm_frf_plot(command,hbm,problem,x,w0,A)
+function hbm_frf_plot(command,hbm,problem,results)
 persistent fig hSuccess hWarn hErr X W
 if hbm.cont.bUpdate
     switch command
@@ -7,24 +7,27 @@ if hbm.cont.bUpdate
                 close(fig)
             end
                           
-            if isempty(x) || isempty(w0)
-                X = zeros(hbm.harm.NFreq,problem.NDof);
-                w0 = NaN;
+            if isempty(results)
+                Xi = zeros(hbm.harm.NFreq,problem.NDof);
+                wi = NaN;
             else
-                X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+                Xi = results.X;
+                wi = results.w;
             end
-            W = getfrequencies(w0,hbm);
-            [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A);
+            W = getfrequencies(wi,hbm);
+            X = Xi;
+            
+            [xlin, wlin] = getLinearReponse(hbm,problem,X,wi,results.A);
             [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
 
         case {'data','err','warn'}
             if ~ishandle(fig(1))
-                [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),A);
+                [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),results.A);
                 [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
             end
             
-            X(:,:,end+1) = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-            W(:,end+1) = getfrequencies(w0,hbm);
+            X(:,:,end+1) = results.X;
+            W(:,end+1) = getfrequencies(results.w,hbm);
             Xabs = abs(X); Xabs = Xabs(:,:,end);
             Xph = unwrap(angle(X)); Xph = Xph(:,:,end);
             Wfreq = W(:,end);
@@ -184,45 +187,12 @@ x0 = X(1,:).';
 U = A*feval(problem.excite,hbm,problem,w0);
 u0 = U(1,:).';
 
-%compute the fourier coefficients of the derivatives
-Wx = repmat(1i*w,1,size(X,2));
-Xdot  = X.*Wx;
-Xddot = Xdot.*Wx;
+States = hbm_states3d(w0,X,U,hbm);
 
-%precompute the external inputs
-Wu = repmat(1i*w,1,size(U,2));
-Udot  = U.*Wu;
-Uddot = Udot.*Wu;
+States.f = feval(problem.model,'nl',States,hbm,problem);
 
-x     = freq2time3d(X,NHarm,hbm.harm.iSub,Nfft);
-xdot  = freq2time3d(Xdot,NHarm,hbm.harm.iSub,Nfft);
-xddot = freq2time3d(Xddot,NHarm,hbm.harm.iSub,Nfft);
-
-%create the vector of inputs
-u     = freq2time3d(U,NHarm,hbm.harm.iSub,Nfft);
-udot  = freq2time3d(Udot,NHarm,hbm.harm.iSub,Nfft);
-uddot = freq2time3d(Uddot,NHarm,hbm.harm.iSub,Nfft);
-
-% %create the time series from the fourier series
-% x     = repmat(x0,1,prod(Nfft))';
-% xdot  = 0*x;
-% xddot = 0*x;
-% 
-% %create the vector of inputs
-% u     = repmat(u0,1,prod(Nfft))';
-% udot  = 0*u;
-% uddot = 0*u;
-
-%work out the time vector
-t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wB(1);
-t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wB(2);
-[t1,t2] = ndgrid(t1,t2);
-t = [t1(:) t2(:)];
-
-f0 = feval(problem.model,'nl',t',x',xdot',xddot',u',udot',uddot',hbm,problem,w0).';
-
-[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
-[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},t,x,xdot,xddot,u,udot,uddot,f0,hbm,problem,w0);
+[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
+[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States,hbm,problem);
 
 K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
 Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
