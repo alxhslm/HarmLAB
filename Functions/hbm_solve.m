@@ -38,8 +38,7 @@ constr_tol = 1E-6;
 maxit = 20;
 
 X0 = x0./problem.xscale;
-% F0 = feval(funcs.constraints,X0,options.auxdata);
-% J0 = feval(funcs.jacobian,X0,options.auxdata);
+% [F0,J0] = hbm_constraints(X0,hbm,problem,w0,u);
 
 attempts = 0;
 while ~bSuccess && attempts < hbm.max_iter
@@ -61,6 +60,8 @@ while ~bSuccess && attempts < hbm.max_iter
             iter = info.iter;
     end
     X0 = X + 1E-8*rand(Nhbm,1);
+    % F0 = hbm_constraints(X0,hbm,problem,w0,u);
+
     attempts = attempts + 1;
 end
 if ~bSuccess
