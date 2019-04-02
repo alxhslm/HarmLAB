@@ -430,7 +430,7 @@ end
 if ~isfield(results,'L')
     for i = 1:NPts
         w0 = results(i).w*hbm.harm.rFreqRatio;
-        results(i).L = floquetMultipliers(hbm,problem,w0,results(i).U,results(i).X);
+        results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
     end
 end
 
