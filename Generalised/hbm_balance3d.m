@@ -5,8 +5,6 @@ if hbm.options.bUseStandardHBM
 end
 NDofTot = hbm.harm.NRetain;
 
-%TODO: this assumes fNL(x,xdot). Extend to case fNL(x,xdot,xddot);
-
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
         Jx = prod(w0)*hbm.lin.Ax;

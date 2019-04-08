@@ -1,8 +1,6 @@
 function varargout = hbm_balance(command,hbm,problem,w0,u,x)
 NDofTot = hbm.harm.NComp*problem.NDof;
 
-%TODO: this assumes fNL(x,xdot). Extend to case fNL(x,xdot,xddot);
-
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
         Jx = (hbm.lin.Ak{1} + w0*hbm.lin.Ac{1} + w0^2*hbm.lin.Am{1});
