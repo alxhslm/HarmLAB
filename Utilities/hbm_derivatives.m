@@ -16,8 +16,8 @@ for i = 1:length(var)
             if hbm.dependence.w
                 for k = 1:NFreq
                     States2 = States;
-                    States2.w(k) = States.w(k) + h;
-                    States2.t(k,:) = w0(k)*States2.t(k,:)/States2.w(k);
+                    States2.w0(k) = States.w0(k) + h;
+                    States2.t(k,:) = States.w0(k)*States2.t(k,:)/States2.w0(k);
                     States2.f = feval(problem.model,fun,States2,hbm,problem);
                     df_dw{k} = (States2.f-States.f)./h;
                 end
@@ -25,7 +25,7 @@ for i = 1:length(var)
                 df_dw = repmat({zeros(size(f,2),NPts)},1,NFreq);
             end
         end
-        for k = 1:length(w0)
+        for k = 1:length(States.w0)
             df_dw{k} = df_dw{k}.';
         end
         varargout{i} = df_dw;
