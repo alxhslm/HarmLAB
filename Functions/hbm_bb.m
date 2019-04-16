@@ -172,7 +172,11 @@ switch hbm.cont.method
         J = hbm_bb_jacobian(Zprev,hbm,problem);
         Tprev = get_tangent(J);
         Tprev = Tprev * sign(Tprev(end)) * sign(AEnd - A0);
+
         Zend = zEnd./problem.Zscale;
+        J = hbm_bb_jacobian(Zend,hbm,problem);
+        Tend = get_tangent(J);
+        Tend = Tend * sign(Tend(end)) * sign(AEnd - A0);
         
         pred.step = hbm.cont.step0;
         corr.step = pred.step;
@@ -372,7 +376,7 @@ switch hbm.cont.method
         pred.step = norm(Zend - Zprev);
         corr.step = norm(Zend - Zprev);
         corr.it = 0;
-        curr(end+1) = hbm_bb_results(Zend,T,pred,corr,hbm,problem);
+        curr(end+1) = hbm_bb_results(Zend,Tend,pred,corr,hbm,problem);
         results(end+1) = curr(end);
 
         hbm_bb_plot('close',hbm,problem,[]);
