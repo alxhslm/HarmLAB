@@ -17,20 +17,29 @@ if hbm.cont.bUpdate
             W = getfrequencies(wi,hbm);
             X = Xi;
             
-            [xlin, wlin] = getLinearReponse(hbm,problem,X,wi,results.A);
-            [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
+            [xlin, wlin] = getLinearReponse(hbm,problem,Xi,wi,results.A);
+
+            xlin = mtimesx(xlin,problem.RDofPlot');
+            Xplot = mtimesx(X,problem.RDofPlot');
+            
+            [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,Xplot,W,xlin,wlin);
 
         case {'data','err','warn'}
             if ~ishandle(fig(1))
                 [xlin, wlin] = getLinearReponse(hbm,problem,X(:,:,1),W(1),results.A);
-                [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,X,W,xlin,wlin);
+                xlin = mtimesx(xlin,problem.RDofPlot');
+                Xplot = mtimesx(X,problem.RDofPlot');
+                [fig,hSuccess,hWarn,hErr] = createFRF(hbm,problem,Xplot,W,xlin,wlin);
             end
             
             X(:,:,end+1) = results.X;
             W(:,end+1) = getfrequencies(results.w,hbm);
-            Xabs = abs(X); Xabs = Xabs(:,:,end);
-            Xph = unwrap(angle(X)); Xph = Xph(:,:,end);
+            
+            Xplot = mtimesx(X(:,:,end-1:end),problem.RDofPlot');
+            Xabs = abs(Xplot(:,:,end));
+            Xph  = unwrap(angle(Xplot)); Xph = Xph(:,:,end);
             Wfreq = W(:,end);
+            
             if any(strcmpi(command,{'data','warn'}))
                 update_handles(hSuccess,Xabs,Xph,Wfreq,hbm,problem)
                 %update our progress
@@ -42,7 +51,7 @@ if hbm.cont.bUpdate
                 
                 %reset the error points
                 for i = 1:length(hbm.harm.iHarmPlot)
-                    for j = 1:length(problem.iDofPlot)
+                    for j = 1:size(problem.RDofPlot,1)
                         for k = 1:2
                             set(hWarn{k}(i,j),'xdata',NaN,'ydata',NaN);
                             set(hErr{k}(i,j) ,'xdata',NaN,'ydata',NaN);
@@ -55,7 +64,6 @@ if hbm.cont.bUpdate
                 W(:,end) = [];
                 update_handles(hErr,Xabs,Xph,Wfreq,hbm,problem)
             end
-
             drawnow
         case 'close'
             close(fig)
@@ -67,10 +75,10 @@ end
 
 function update_handles(han,Xabs,Xph,W,hbm,problem)
 for i = 1:length(hbm.harm.iHarmPlot)
-    for j = 1:length(problem.iDofPlot)
+    for j = 1:size(problem.RDofPlot,1)
         w = [get(han{1}(i,j),'xdata'),W(hbm.harm.iHarmPlot(i),:)];
-        mag = [get(han{1}(i,j),'ydata'),permute(Xabs(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
-        ph  = [get(han{2}(i,j) ,'ydata'),permute(Xph(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:),[1 3 2])];
+        mag = [get(han{1}(i,j),'ydata'),permute(Xabs(hbm.harm.iHarmPlot(i),j,:),[1 3 2])];
+        ph  = [get(han{2}(i,j) ,'ydata'),permute(Xph(hbm.harm.iHarmPlot(i),j,:),[1 3 2])];
         ph  = unwrap(ph);
         set(han{1}(i,j),'xdata',w,'ydata',mag);
         set(han{2}(i,j) ,'xdata',w,'ydata',ph);
@@ -93,9 +101,9 @@ wlin = getfrequencies(wlin0,hbm);
 wlim = getfrequencies([problem.wMin problem.wMax],hbm);
 
 for i = 1:length(hbm.harm.iHarmPlot)
-    for j = 1:length(problem.iDofPlot)
-        tmp = subplot(length(problem.iDofPlot),length(hbm.harm.iHarmPlot),(j-1)*length(hbm.harm.iHarmPlot) + i,'Parent',fMag);        
-        Xij = squeeze(xlin(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:));
+    for j = 1:size(problem.RDofPlot,1)
+        tmp = subplot(size(problem.RDofPlot,1),length(hbm.harm.iHarmPlot),(j-1)*length(hbm.harm.iHarmPlot) + i,'Parent',fMag);        
+        Xij = squeeze(xlin(hbm.harm.iHarmPlot(i),j,:));
         wij = wlin(hbm.harm.iHarmPlot(i),:);
         [tmp2,hLin{1}(i,j),hLin{2}(i,j)] = plotyy(tmp,wij,abs(Xij),wij,unwrap(angle(Xij)));
         ax{1}(i,j) = tmp2(1); ax{2}(i,j) = tmp2(2);
@@ -105,9 +113,9 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 for i = 1:length(hbm.harm.iHarmPlot)
-    for j = 1:length(problem.iDofPlot)
-        hSuccess{1}(i,j)  = plot(ax{1}(i,j),w(hbm.harm.iHarmPlot(i),:),abs(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:))),'g.-');
-        hSuccess{2}(i,j)  = plot(ax{2}(i,j),w(hbm.harm.iHarmPlot(i),:),unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),problem.iDofPlot(j),:)))),'m.-');
+    for j = 1:size(problem.RDofPlot,1)
+        hSuccess{1}(i,j)  = plot(ax{1}(i,j),w(hbm.harm.iHarmPlot(i),:),abs(squeeze(x(hbm.harm.iHarmPlot(i),j,:))),'g.-');
+        hSuccess{2}(i,j)  = plot(ax{2}(i,j),w(hbm.harm.iHarmPlot(i),:),unwrap(angle(squeeze(x(hbm.harm.iHarmPlot(i),j,:)))),'m.-');
         
         for k = 1:2
             hWarn{k}(i,j) = plot(ax{k}(i,j),NaN,NaN,'b.');
@@ -118,7 +126,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
             set(ax{k}(i,j),'YLimMode','auto')
         end
         
-        if j==length(problem.iDofPlot)
+        if j==size(problem.RDofPlot,1)
             xlabel(ax{1}(i,j),'\omega (rads)')
         end
         if j==1
@@ -126,11 +134,11 @@ for i = 1:length(hbm.harm.iHarmPlot)
         end
         
         if i == 1
-            ylabel(ax{1}(i,j),sprintf('|Dof #%d|',problem.iDofPlot(j)))
+            ylabel(ax{1}(i,j),sprintf('|Dof #%d|',j))
         end
         
         if i == length(hbm.harm.iHarmPlot)
-            ylabel(ax{2}(i,j),sprintf('\\angle Dof #%d',problem.iDofPlot(j)))
+            ylabel(ax{2}(i,j),sprintf('\\angle Dof #%d',j))
         end
     end
 end

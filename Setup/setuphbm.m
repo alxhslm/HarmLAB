@@ -55,7 +55,21 @@ hbm.lin    = setupLin(hbm.harm,problem);
 hbm.nonlin = setupNonlin(hbm.harm,problem);
 
 hbm.harm = default_missing(hbm.harm,{'iHarmPlot'},{1:hbm.harm.NFreq});
-problem = default_missing(problem,{'iDofPlot'},{1:problem.NDof});
+
+if ~isfield(problem,'iDofPlot') && ~isfield(problem,'RDofPlot')
+    problem.iDofPlot = 1:problem.NDof;
+end
+
+if ~isfield(problem,'RDofPlot')
+    R = zeros(length(problem.iDofPlot),problem.NDof);
+    for j = 1:length(problem.iDofPlot)
+        R(j,j) = 1;
+    end
+    problem.RDofPlot = R;
+elseif size(problem.RDofPlot,2) ~= problem.NDof
+    error('Wrong size for RDofPlot')
+end
+  
 
 function options = setupOptions(options)
 if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
