@@ -8,11 +8,14 @@ P.m2 = 2;
 P.c1 = 0.05;
 P.c2 = 0.05;
 P.c3 = 0.05;
-P.cnl = 0.00;
-P.knl = 0.5*abs(1.5+rand(1));
-P.kJen = 3;
-P.FJen = 0;
+
+P.cnl = 0*[0 0 0.005]';
+P.knl = 0*[0 0 0.004]';
 P.n = 3;
+
+P.R = [1 0;
+      -1 1;
+       0 1];
 
 %forcing
 P.f0 = 0;
@@ -23,7 +26,7 @@ P.iDof = 1;
 P.iInput = 1;
 
 problem.K = P.k1*[1 0;
-          0 0];
+                  0 0];
 problem.K = problem.K + P.k2*[1 -1;
              -1  1];    
 problem.K = problem.K + P.k3*[0 0;
@@ -45,7 +48,6 @@ problem.Ku = [0;1];
 problem.model = @test_model;
 problem.excite = @test_excite;
 problem.obj = @test_obj;
-problem.NDof = 2;
-problem.NInput = 1;
-problem.NOutput = 2;
+
+problem.iNL = 2;%[1;2];
 problem.P = P;

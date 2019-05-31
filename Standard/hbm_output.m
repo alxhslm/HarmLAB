@@ -7,7 +7,7 @@ Nfft  = hbm.harm.Nfft(1);
 
 iRetain = hbm.harm.iRetain;
 
-if isvector(x)
+if isvector(x) && size(x,1) == hbm.harm.NComp*NDof
     X = unpackdof(x,NFreq-1,NDof,iRetain);
     U = unpackdof(u,NFreq-1,NInput);
 else

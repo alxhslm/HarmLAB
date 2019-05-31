@@ -1,15 +1,13 @@
 function sol = hbm_solve(hbm,problem,w,A,X0)
 problem.type = 'solve';
 
-NDof = problem.NDof;
-
 if nargin < 5 || isempty(X0)
-    X0 = zeros(hbm.harm.NComp*NDof);
+    X0 = zeros(hbm.harm.NFreq,problem.NDof);
 end
-if ~isvector(X0)
-    x0 = packdof(X0,hbm.harm.iRetain);
-else
+if ~isvector(X0)  && size(X0,1) == hbm.harm.NComp*problem.NDof
     x0 = X0;
+else
+    x0 = packdof(X0(:,problem.iNL),hbm.harm.iRetainNL);
 end
 
 %setup the problem for IPOPT
@@ -23,7 +21,7 @@ u = packdof(U);
 
 iRetain = hbm.harm.iRetain;
 NComp = hbm.harm.NComp;
-Nhbm  = hbm.harm.NRetain;
+NRetainNL  = hbm.harm.NRetainNL;
 
 init.X = X0;
 init.w = w;
@@ -69,7 +67,7 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
     end
-    Z0 = Z + 1E-8*rand(Nhbm,1);
+    Z0 = Z + 1E-8*rand(NRetainNL,1);
     attempts = attempts + 1;
 end
 if ~bSuccess
@@ -77,16 +75,17 @@ if ~bSuccess
 end
 z = Z.*problem.Zscale;
 
-x = z;
+x = hbm_recover(hbm,problem,w0(1),u,z);
+X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
 
 sol.w = w;
 sol.A = A;
-sol.X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,iRetain);
+sol.X = X;
 sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
 
 %floquet multipliers
-sol.L = hbm_floquet(hbm,problem,w0,u,x);
+% sol.L = hbm_floquet(hbm,problem,w0,u,x);
 
 sol.it = iter;
 

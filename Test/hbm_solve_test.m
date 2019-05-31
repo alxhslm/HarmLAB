@@ -1,8 +1,6 @@
 function hbm_solve_test
 problem = test_params;
-NDof = problem.NDof;
 
-hbm.harm.NHarm = 2;
 hbm.harm.Nfft = 32;
 
 hbm.options.bUseStandardHBM = true;
@@ -22,13 +20,20 @@ omega = sqrt(eig(problem.K,problem.M));
 w0 = 4;
 A = 100;
 
+% hbm.harm.NHarm = 4;
+hbm.harm.group{1}.kHarm = [0; 1];
+hbm.harm.group{2}.kHarm = [0; 1; 2; 3];
+% 
+problem.iGroup = [1 2]';
+
 [hbm,problem] = setuphbm(hbm,problem);
+NDof = problem.NDof;
 
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'mat';
 hbm = setuphbm(hbm,problem);
 tic;
-sol1 = hbm_solve(hbm,problem,w0,A,[]);
+sol1 = hbm_solve(hbm,problem,w0,A);
 [t1,x1,xdot1] = get_time_series(hbm,w0,sol1.X);
 tRun(1) = toc;
 
@@ -36,7 +41,7 @@ hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'sum';
 hbm = setuphbm(hbm,problem);
 tic;
-sol2 = hbm_solve(hbm,problem,w0,A,sol1.X);
+sol2 = hbm_solve(hbm,problem,w0,A);
 [t2,x2,xdot2] = get_time_series(hbm,w0,sol2.X);
 tRun(2) = toc;
 
@@ -44,7 +49,7 @@ hbm.options.aft_method = 'fft';
 hbm.options.jacob_method = 'mat';
 hbm = setuphbm(hbm,problem);
 tic;
-sol3 = hbm_solve(hbm,problem,w0,A,sol2.X);
+sol3 = hbm_solve(hbm,problem,w0,A);
 [t3,x3,xdot3] = get_time_series(hbm,w0,sol3.X);
 tRun(3) = toc;
 
@@ -52,7 +57,7 @@ hbm.options.aft_method = 'fft';
 hbm.options.jacob_method = 'sum';
 hbm = setuphbm(hbm,problem);
 tic;
-sol4 = hbm_solve(hbm,problem,w0,A,sol3.X);
+sol4 = hbm_solve(hbm,problem,w0,A);
 [t4,x4,xdot4] = get_time_series(hbm,w0,sol4.X);
 tRun(4) = toc;
 
@@ -97,3 +102,8 @@ legend(leg)
 for i = 1:5
      fprintf('%s: %f s\n',names{i},tRun(i));
 end
+
+sol1.X
+sol2.X
+sol3.X
+sol4.X

@@ -33,3 +33,10 @@ for j = 2:harm.NFreq
     Bx{j} = -2*prod(harm.kHarm(j,:).*harm.rFreqBase)*blkdiag(Mu,Mu);
 end
 Bx = blkdiag(Bx{:});
+
+for k = 1:2
+    Bk{k} = sparse(Bk{k});
+    Bm{k} = sparse(Bm{k});
+    Bc{k} = sparse(Bc{k});
+end
+Bx = sparse(Bx);

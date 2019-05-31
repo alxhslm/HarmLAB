@@ -4,7 +4,7 @@ problem.A = A;
 
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w0,A,X0);
-x0 = packdof(sol.X,hbm.harm.iRetain);
+x0 = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
 u0 = packdof(sol.U);
 f0 = packdof(sol.F);
 if any(isnan(abs(x0(:))))
@@ -23,7 +23,7 @@ init.w = w0;
 init.A = A;
 
 sol = hbm_solve(hbm,problem,wEnd,A,XEnd);
-xEnd = packdof(sol.X,hbm.harm.iRetain);
+xEnd = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
 uEnd = packdof(sol.U);
 fEnd = packdof(sol.F);
 if any(isnan(abs(xEnd(:))))
@@ -105,9 +105,9 @@ switch hbm.cont.method
            
             %now try to solve
             xpred = zpred(1:end-1);
-            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+            Xpred(:,problem.iNL) = unpackdof(xpred,hbm.harm.NFreq-1,problem.NNL,hbm.harm.iRetainNL);
             sol = hbm_solve(hbm,problem,wpred,A,Xpred);
-            sol.x = packdof(sol.X);
+            sol.x = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
             
             z = [sol.x; sol.w];
             t = z - zprev;
@@ -444,7 +444,7 @@ if ~isfield(results,'W')
     end
 end
 
-if ~isfield(results,'L')
+if 0%~isfield(results,'L')
     for i = 1:NPts
         w0 = results(i).w*hbm.harm.rFreqRatio;
         results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
@@ -572,11 +572,12 @@ t = t./norm(t);
 
 function curr = hbm_frf_results(Z,tangent,pred,corr,hbm,problem)
 w = Z(end).*problem.wscale;
-x = Z(1:end-1).*problem.xscale;
+xnl = Z(1:end-1).*problem.xscale;
+Xnl = unpackdof(xnl,hbm.harm.NHarm,problem.NNL,hbm.harm.iRetainNL);
 A = problem.A;
 t = normalise(tangent.*problem.Zscale);
 
-curr.z = [x; w];
+curr.z = [xnl; w];
 curr.t = t;
 
 curr.sCorr = corr.step;
@@ -585,7 +586,7 @@ curr.it = corr.it;
 curr.flag = '';
 
 curr.w = w;
-curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
 curr.U = A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
+curr.X = hbm_recover(hbm,problem,curr.w*hbm.harm.rFreqRatio(1),curr.U,Xnl);
 curr.F = hbm_output3d(hbm,problem,curr.w*hbm.harm.rFreqRatio,curr.U,curr.X);
 curr.A = A;

@@ -14,7 +14,7 @@ switch hbm.scaling.method
         xharm = max(abs(X(2:end,:)),tol);
 end
 xscale = [xdc; xharm*(1+1i)];
-problem.xscale = packdof(xscale,hbm.harm.iRetain);
+problem.xscale = packdof(xscale,hbm.harm.iRetainNL);
 problem.Zscale = problem.xscale;
 problem.Fscale = ones(length(problem.xscale),1);
 

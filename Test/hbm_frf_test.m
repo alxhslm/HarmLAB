@@ -1,8 +1,6 @@
 function hbm_frf_test
 problem = test_params;
-NDof = problem.NDof;
 
-hbm.harm.NHarm = 2;
 hbm.harm.Nfft = 32;
 
 hbm.options.bUseStandardHBM = true;
@@ -20,7 +18,14 @@ hbm.cont.method = 'predcorr';
 hbm.options.aft_method = 'mat';
 hbm.options.jacob_method = 'mat';
 
+% hbm.harm.NHarm = 4;
+hbm.harm.group{1}.kHarm = [0; 1];
+hbm.harm.group{2}.kHarm = [0; 1; 2; 3];
+% 
+problem.iGroup = [1 2]';
+
 [hbm,problem] = setuphbm(hbm,problem);
+NDof = problem.NDof;
 
 omega = sqrt(eig(problem.K,problem.M));
 w0 = max(min(omega)-2,0.5);
@@ -33,11 +38,11 @@ hbm.cont.step = 1E-5;
 sol1 = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
 X1 = cat(3,sol1.X);
 X1 = permute(X1(2,:,:),[2 3 1]);
-L = cat(2,sol1.L);
-iStable = all(real(L)<0,1);
+w1 = cat(2,sol1.w);
+% L = cat(2,sol1.L);
+iStable = 0*w1+1;%all(real(L)<0,1);
 Xs = X1; Xs(:,~iStable) = NaN;
 Xus = X1; Xus(:,iStable) = NaN;
-w1 = cat(2,sol1.w);
 t(1) = toc;
 figure
 hold on
