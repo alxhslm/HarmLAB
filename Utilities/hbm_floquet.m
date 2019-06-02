@@ -1,12 +1,15 @@
-function lambda = hbm_floquet(hbm,problem,w0,u,x)
-if any(isnan(x) | isinf(x))
-    lambda = NaN(hbm.harm.NComp*2*problem.NDof,1);
-    return
+function lambda = hbm_floquet(hbm,problem,w0,U,X)
+if ~(isvector(X) && size(X,1) == hbm.harm.NRetainNL)
+    x = packdof(X(:,problem.iNL),hbm.harm.iRetainNL);
+    u = packdof(U);
+else
+    x = X;
+    u = U;
 end
 
-if ~isvector(x)
-    x = packdof(x,hbm.harm.iRetain);
-    u = packdof(u);
+if any(isnan(x) | isinf(x))
+    lambda = NaN(hbm.harm.NRetainNL,1);
+    return
 end
 
 [A,B] = floquetMatrices(hbm,problem,w0,u,x);
@@ -34,8 +37,8 @@ for i = 1:NPts
 
     % lambda = polyeig(D0,D1,D2);
 
-    I = eye(hbm.harm.NRetain);
-    Z = zeros(hbm.harm.NRetain);
+    I = eye(hbm.harm.NRetainNL);
+    Z = zeros(hbm.harm.NRetainNL);
 
     B1 = [D1 D0;
           -I  Z];

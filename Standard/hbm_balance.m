@@ -94,7 +94,7 @@ switch command
         else
             D1nl = 0*D1l;
         end
-        varargout{1} = D1l - D1nl;
+        varargout{1} = R*(D1l - D1nl);
     case 'floquet2'
         D2l = hbm.lin.floquet.D2;
         if hbm.bIncludeNL
@@ -102,5 +102,5 @@ switch command
         else
             D2nl = 0*D2l;
         end
-        varargout{1} = D2l - D2nl;
+        varargout{1} = R*(D2l - D2nl);
 end

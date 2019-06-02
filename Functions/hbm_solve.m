@@ -84,8 +84,8 @@ sol.X = X;
 sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
 
-%floquet multipliers
-% sol.L = hbm_floquet(hbm,problem,w0,u,x);
+% floquet multipliers
+sol.L = hbm_floquet(hbm,problem,w0,sol.U,sol.X);
 
 sol.it = iter;
 

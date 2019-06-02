@@ -444,7 +444,7 @@ if ~isfield(results,'W')
     end
 end
 
-if 0%~isfield(results,'L')
+if ~isfield(results,'L')
     for i = 1:NPts
         w0 = results(i).w*hbm.harm.rFreqRatio;
         results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);

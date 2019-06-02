@@ -1,5 +1,6 @@
 function lin = setupLin(harm,problem)
 iRetain = harm.iRetain;
+iRetainNL = harm.iRetainNL;
 
 %% state-jacobian
 [lin.Ak,lin.Ac,lin.Am,lin.Ax] = linear_jacobian(harm,problem.K,problem.C,problem.M);
@@ -35,9 +36,9 @@ floquet.D2 = kron(eye(harm.NComp),problem.M);
 
 %trim to size
 for i = 1:2
-    floquet.D1xddot{i} = floquet.D1xddot{i}(iRetain,iRetain);
+    floquet.D1xddot{i} = floquet.D1xddot{i}(iRetain,iRetainNL);
 end
-floquet.D1xdot = floquet.D1xdot(iRetain,iRetain);
-floquet.D2 = floquet.D2(iRetain,iRetain);
+floquet.D1xdot = floquet.D1xdot(iRetain,iRetainNL);
+floquet.D2 = floquet.D2(iRetain,iRetainNL);
 
 lin.floquet = floquet;

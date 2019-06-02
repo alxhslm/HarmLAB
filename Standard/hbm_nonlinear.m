@@ -297,27 +297,27 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            D1 = sum(hbm.nonlin.hbm.Jx.*States.df_dxdot(ijacobx,ijacobx,:),3);
+                            D1 = sum(hbm.nonlin.hbm.Jx.*States.df_dxdot(ijacobx,ijacobxnl,:),3);
                         case 'sum'
                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
-                            D1 = zeros(NNL*NComp);
-                            D1(1:NNL,1:NNL) = mean(States.df_dxdot,3);
+                            D1 = zeros(NRetain,NRetainNL);
+                            D1(1:NDof,1:NNL) = mean(States.df_dxdot(:,iNL,:),3);
                             for l = 1:(NFreq-1)
                                 [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                D1(1:NNL,(2*l-1)*NNL+(1:NNL)) =  sum(( States.df_dxdot.*cl)/Nfft,3);
-                                D1(1:NNL,(2*l-0)*NNL+(1:NNL)) =  sum((-States.df_dxdot.*sl)/Nfft,3);
+                                D1(1:NDof,(2*l-1)*NNL+(1:NNL)) =  sum(( States.df_dxdot(:,iNL,:).*cl)/Nfft,3);
+                                D1(1:NDof,(2*l-0)*NNL+(1:NNL)) =  sum((-States.df_dxdot(:,iNL,:).*sl)/Nfft,3);
                             end
                             for k = 1:(NFreq-1)
                                 [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
-                                D1((2*k-1)*NNL+(1:NNL),1:NNL) =  2*sum(States.df_dxdot.*ck/Nfft,3);
-                                D1((2*k-0)*NNL+(1:NNL),1:NNL) = -2*sum(States.df_dxdot.*sk/Nfft,3);
+                                D1((2*k-1)*NDof+(1:NDof),1:NNL) =  2*sum(States.df_dxdot(:,iNL,:).*ck/Nfft,3);
+                                D1((2*k-0)*NDof+(1:NDof),1:NNL) = -2*sum(States.df_dxdot(:,iNL,:).*sk/Nfft,3);
                                 for l = 1:(NFreq-1)
                                     [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                    D1((2*k-1)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) =  2*sum(( States.df_dxdot.*cl).*ck/Nfft,3);
-                                    D1((2*k-1)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) =  2*sum((-States.df_dxdot.*sl).*ck/Nfft,3);
-                                    D1((2*k-0)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) = -2*sum(( States.df_dxdot.*cl).*sk/Nfft,3);
-                                    D1((2*k-0)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) = -2*sum((-States.df_dxdot.*sl).*sk/Nfft,3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) =  2*sum(( States.df_dxdot(:,iNL,:).*cl).*ck/Nfft,3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) =  2*sum((-States.df_dxdot(:,iNL,:).*sl).*ck/Nfft,3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) = -2*sum(( States.df_dxdot(:,iNL,:).*cl).*sk/Nfft,3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) = -2*sum((-States.df_dxdot(:,iNL,:).*sl).*sk/Nfft,3);
                                 end
                             end
                             D1 = D1(iRetain,iRetainNL);
@@ -336,24 +336,24 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            D1 = sum(hbm.nonlin.hbm.Jxdot{1}.*States.df_dxddot(ijacobx,ijacobx,:),3);
+                            D1 = sum(hbm.nonlin.hbm.Jxdot{1}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                         case 'sum'
                             theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NNL,NNL,1);
                             
-                            D1 = zeros(NNL*NComp);
+                            D1 = zeros(NRetain,NRetainNL);
                             for l = 1:(NFreq-1)
                                 [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                D1(1:NNL,(2*l-1)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot.*sl)/Nfft,3);
-                                D1(1:NNL,(2*l-0)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot.*cl)/Nfft,3);
+                                D1(1:NDof,(2*l-1)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl)/Nfft,3);
+                                D1(1:NDof,(2*l-0)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl)/Nfft,3);
                             end
                             for k = 1:(NFreq-1)
                                 [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
                                 for l = 1:(NFreq-1)
                                     [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                    D1((2*k-1)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot.*sl).*ck/Nfft,3);
-                                    D1((2*k-1)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot.*cl).*ck/Nfft,3);
-                                    D1((2*k-0)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot.*sl).*sk/Nfft,3);
-                                    D1((2*k-0)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot.*cl).*sk/Nfft,3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*ck/Nfft,3);
+                                    D1((2*k-1)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*ck/Nfft,3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*sk/Nfft,3);
+                                    D1((2*k-0)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*sk/Nfft,3);
                                 end
                             end
                             D1 = D1(iRetain,iRetainNL);
@@ -373,27 +373,27 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            D2 = sum(hbm.nonlin.hbm.Jx.*States.df_dxddot(ijacobx,ijacobx,:),3);
+                            D2 = sum(hbm.nonlin.hbm.Jx.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                         case 'sum'
                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
-                            D2 = zeros(NNL*NComp);
-                            D2(1:NNL,1:NNL) = mean(States.df_dxddot,3);
+                            D2 = zeros(NRetain,NRetainNL);
+                            D2(1:NDof,1:NNL) = mean(States.df_dxddot(:,iNL,:),3);
                             for l = 1:(NFreq-1)
                                 [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                D2(1:NNL,(2*l-1)*NNL+(1:NNL)) =  sum(( States.df_dxddot.*cl)/Nfft,3);
-                                D2(1:NNL,(2*l-0)*NNL+(1:NNL)) =  sum((-States.df_dxddot.*sl)/Nfft,3);
+                                D2(1:NDof,(2*l-1)*NNL+(1:NNL)) =  sum(( States.df_dxddot(:,iNL,:).*cl)/Nfft,3);
+                                D2(1:NDof,(2*l-0)*NNL+(1:NNL)) =  sum((-States.df_dxddot(:,iNL,:).*sl)/Nfft,3);
                             end
                             for k = 1:(NFreq-1)
                                 [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
-                                D2((2*k-1)*NNL+(1:NNL),1:NNL) =  2*sum(States.df_dxddot.*ck/Nfft,3);
-                                D2((2*k-0)*NNL+(1:NNL),1:NNL) = -2*sum(States.df_dxddot.*sk/Nfft,3);
+                                D2((2*k-1)*NDof+(1:NDof),1:NNL) =  2*sum(States.df_dxddot(:,iNL,:).*ck/Nfft,3);
+                                D2((2*k-0)*NDof+(1:NDof),1:NNL) = -2*sum(States.df_dxddot(:,iNL,:).*sk/Nfft,3);
                                 for l = 1:(NFreq-1)
                                     [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                    D2((2*k-1)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) =  2*sum(( States.df_dxddot.*cl).*ck/Nfft,3);
-                                    D2((2*k-1)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) =  2*sum((-States.df_dxddot.*sl).*ck/Nfft,3);
-                                    D2((2*k-0)*NNL+(1:NNL),(2*l-1)*NNL+(1:NNL)) = -2*sum(( States.df_dxddot.*cl).*sk/Nfft,3);
-                                    D2((2*k-0)*NNL+(1:NNL),(2*l-0)*NNL+(1:NNL)) = -2*sum((-States.df_dxddot.*sl).*sk/Nfft,3);
+                                    D2((2*k-1)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) =  2*sum(( States.df_dxddot(:,iNL,:).*cl).*ck/Nfft,3);
+                                    D2((2*k-1)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) =  2*sum((-States.df_dxddot(:,iNL,:).*sl).*ck/Nfft,3);
+                                    D2((2*k-0)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) = -2*sum(( States.df_dxddot(:,iNL,:).*cl).*sk/Nfft,3);
+                                    D2((2*k-0)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) = -2*sum((-States.df_dxddot(:,iNL,:).*sl).*sk/Nfft,3);
                                 end
                             end
                             D2 = D2(iRetain,iRetainNL);
