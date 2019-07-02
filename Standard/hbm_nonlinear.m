@@ -60,7 +60,7 @@ for o = 1:length(command)
                 Dw = zeros(NRetain,1);
             else
                 dfhbm_dw = hbm_derivatives('nl' ,'w',States,hbm,problem);
-                Dw = packdof(hbm.nonlin.FFT*dfhbm_dw{1},hbm_nonlinear); 
+                Dw = packdof(hbm.nonlin.FFT*dfhbm_dw{1},iRetain); 
             end
             varargout{o} = Dw;
         case 'jacobX'  %df_dX = Jx*X

@@ -34,7 +34,7 @@ end
 hbm.cont = setupCont(hbm.cont);
 
 %% Problem definition
-problem = setupProblem(problem);
+problem = setupProblem(problem,hbm);
 hbm.harm = setupGroups(problem,hbm.harm);
 
 if ~isfield(problem,'sparsity')
@@ -89,7 +89,7 @@ if ~isfield(cont,'coco'), cont.coco = struct(); end
 cont.coco = default_missing(cont.coco,{'ItMX','NPR'},{2E4,5});
 
 
-function problem = setupProblem(problem)
+function problem = setupProblem(problem,hbm)
 if ~isfield(problem,'name')
     problem.name = '';
 end
@@ -133,8 +133,7 @@ end
 
 try
     States = empty_states(problem);
-    hbm = struct();
-    out = feval(problem.model,'out',States,hbm,problem);
+    out = feval(problem.model,'output',States,hbm,problem);
     problem.NOutput = length(out);
 catch
      error('Error detected in non-linear function')
