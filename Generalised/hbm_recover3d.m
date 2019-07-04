@@ -26,7 +26,7 @@ if problem.NNL ~= problem.NDof
     Apq = A(iLin,iNL);
     
     x = zeros(hbm.harm.NRetain,1);
-    x(iLin) = App\(B(iLin,:)*u - f(iLin) - Apq*xnl);
+    x(iLin) = App\(B(iLin,:)*u - hbm.lin.b(iLin) - f(iLin) - Apq*xnl);
     x(iNL) = xnl;
 else
     x = xnl;
