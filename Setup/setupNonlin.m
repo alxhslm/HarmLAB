@@ -56,15 +56,15 @@ for i = 1:2
 end
 
 %% States
-hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NDof); 
+hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NNL); 
 hbm.Jx     = hbm.Jx(iRetain,iRetainNL,:);
 
-hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NDof); 
+hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NNL); 
 for i = 1:2
     hbm.Jxdot{i}  = hbm.Jxdot{i}(iRetain,iRetainNL,:);
 end
 
-hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NDof); 
+hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NNL); 
 for i = 1:3
     hbm.Jxddot{i}  = hbm.Jxddot{i}(iRetain,iRetainNL,:);
 end

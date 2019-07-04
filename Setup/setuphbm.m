@@ -193,9 +193,15 @@ for i = 1:length(harm.group)
         bRetainNL(iKeepNL) = true;
     end
 end
+%index into the FULL phasor vector comprising of:
+%  - including ALL DOFs (linear and non-linear)
+%  - at ALL possible harmonics (even ones being neglected for certain DOF)
 harm.iRetain = find(bRetain);
 harm.NRetain = sum(bRetain);
 
+%index into the PARTIAL phasor vector comprising of:
+%  - only the non-linear DOFs
+%  - at ALL possible harmonics (even ones being neglected for certain DOF)
 harm.iRetainNL = find(bRetainNL);
 harm.NRetainNL = sum(bRetainNL);
 
