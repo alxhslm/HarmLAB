@@ -51,15 +51,16 @@ hbm.nonlin = setupNonlin(hbm.harm,problem);
 
 hbm.harm = default_missing(hbm.harm,{'iHarmPlot'},{1:hbm.harm.NFreq});
 
-if ~isfield(problem,'iDofPlot') && ~isfield(problem,'RDofPlot')
-    problem.iDofPlot = 1:problem.NDof;
-end
-
 if ~isfield(problem,'RDofPlot')
+    if ~isfield(problem,'iDofPlot')
+        problem.iDofPlot = 1:problem.NDof;
+    end
+
     R = zeros(length(problem.iDofPlot),problem.NDof);
     for j = 1:length(problem.iDofPlot)
-        R(j,j) = 1;
+        R(j,problem.iDofPlot(j)) = 1;
     end
+    
     problem.RDofPlot = R;
 elseif size(problem.RDofPlot,2) ~= problem.NDof
     error('Wrong size for RDofPlot')
@@ -144,12 +145,59 @@ if ~isfield(problem,'iGroup')
 end
 
 if isfield(problem,'res')
-    f = {'input','output','iInput','iOutput','iHarm'};
+    f = {'input','output','iHarm'};
 
     if ~isfield(problem.res,f{i})
         error('Missing field %s from resonance condition',f{i})
     end
+    
+    switch problem.res.input
+        case 'unity'
+            problem.res.NInput = 1;
+        case 'fe'
+            problem.res.NInput = problem.NDof;
+        otherwise
+           problem.res.NInput = problem.NInput;
+    end
 
+    if ~isfield(problem.res,'RInput')
+        if ~isfield(problem.res,'iInput')
+            problem.res.iInput = 1:problem.res.NInput;
+        end
+        
+        R = zeros(length(problem.res.iInput),problem.res.NInput);
+        for j = 1:length(problem.res.iInput)
+            R(j,problem.iInput(j)) = 1;
+        end
+        
+        problem.res.RInput = R;
+    elseif size(problem.res.RInput,2) ~= problem.res.NInput
+        error('Wrong size for RInput')
+    end
+    
+    switch problem.res.output
+        case 'none'
+            problem.res.NOutput = 1;
+        otherwise
+           problem.res.NOutput = problem.NDof;
+    end
+    
+    if ~isfield(problem.res,'ROutput')
+        if ~isfield(problem.res,'iOutput')
+            problem.res.iOutput = 1:problem.res.NOutput;
+        end
+        
+        R = zeros(length(problem.res.iOutput),problem.res.NOutput);
+        for j = 1:length(problem.res.iOutput)
+            R(j,problem.iOutput(j)) = 1;
+        end
+        
+        problem.res.ROutput = R;
+    elseif size(problem.res.ROutput,2) ~= problem.res.NOutput
+        error('Wrong size for ROutput')
+    end
+    
+    
 end
 
 function States = empty_states(problem)

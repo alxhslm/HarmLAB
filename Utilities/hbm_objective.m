@@ -1,23 +1,20 @@
 function varargout = hbm_objective(part,hbm,problem,w0,x,u)
 
-NDof = problem.NDof;
-if strcmp(problem.res.input,'fe')
-    NInput = NDof;
-else
-    NInput = problem.NInput;
-end
+NOutput = problem.res.NOutput;
+NInput = problem.res.NInput;
+
 
 if problem.res.iHarm > 1
-    iRe = problem.res.iDof + 2*(problem.res.iHarm - 2)*NDof + NDof;
-    iIm = problem.res.iDof + 2*(problem.res.iHarm - 2)*NDof + 2*NDof;
+    iRe = (1:NOutput)' + 2*(problem.res.iHarm - 2)*NOutput + NOutput;
+    iIm = (1:NOutput)' + 2*(problem.res.iHarm - 2)*NOutput + 2*NOutput;
     
-    jRe = problem.res.iInput + 2*(problem.res.iHarm - 2)*NInput + NInput;
-    jIm = problem.res.iInput + 2*(problem.res.iHarm - 2)*NInput + 2*NInput;
+    jRe = (1:NInput)' + 2*(problem.res.iHarm - 2)*NInput + NInput;
+    jIm = (1:NInput)' + 2*(problem.res.iHarm - 2)*NInput + 2*NInput;
 else
-    iRe = problem.res.iDof;
+    iRe = (1:NOutput)';
     iIm = [];
     
-    jRe = problem.res.iInput;
+    jRe = (1:NInput)';
     jIm = [];
 end
 
@@ -46,6 +43,7 @@ Fb = Fnl(iRe);
 if ~isempty(iIm)
     Fb = Fb + 1i*Fnl(iIm);
 end
+Fb = problem.res.ROutput*Fb;
 
 %% input
 Wu = kron(D,eye(problem.NInput));
@@ -70,6 +68,7 @@ Fe = Fex(jRe);
 if ~isempty(jIm)
     Fe = Fe + 1i*Fex(jIm);
 end
+Fe = problem.res.RInput*Fe;
 
 if ~iscell(part)
     part = {part};
@@ -101,11 +100,12 @@ for i = 1:length(part)
             end
             
             if ~isempty(iIm)
-                dFbdx = (Fnl(iRe)*Jx(iRe,:) + Fnl(iIm)*Jx(iIm,:))./(abs(Fb) + eps);
+                dFbdx = (real(Fb)*Jx(iRe,:) + imag(Fb)*Jx(iIm,:))./(abs(Fb) + eps);
             else
-                dFbdx = (Fnl(iRe)*Jx(iRe,:))./(abs(Fb) + eps);
+                dFbdx = (real(Fb)*Jx(iRe,:))./(abs(Fb) + eps);
             end
-            
+            dFbdx = problem.res.ROutput*dFbdx;
+
             %excitation
             dFedx = 0;
             
@@ -137,10 +137,11 @@ for i = 1:length(part)
                     Dw_nl = 2*W*(Wx*Wx*x);
             end
             if ~isempty(iIm)
-                dFbdw = (Fnl(iRe)*Dw_nl(iRe) + Fnl(iIm)*Dw_nl(iIm))./(abs(Fb) + eps);
+                dFbdw = (real(Fb)*Dw_nl(iRe) + imag(Fb)*Dw_nl(iIm))./(abs(Fb) + eps);
             else
-                dFbdw = (Fnl(iRe)*Dw_nl(iRe))./(abs(Fb) + eps);
+                dFbdw = (real(Fb)*Dw_nl(iRe))./(abs(Fb) + eps);
             end
+            dFbdw = problem.res.ROutput*dFbdw;
             
             %excitation
             switch problem.res.input
@@ -159,10 +160,11 @@ for i = 1:length(part)
                     Dw_u = 2*W*(Wu*Wu*u);
             end
             if ~isempty(iIm)
-                dFedw = (Fex(jRe)*Dw_u(jRe) + Fex(jIm)*Dw_u(jIm))./abs(Fe);
+                dFedw = (real(Fe)*Dw_u(jRe) + imag(Fe)*Dw_u(jIm))./abs(Fe);
             else
-                dFedw = (Fex(jRe)*Dw_u(jRe))./abs(Fe);
+                dFedw = (real(Fe)*Dw_u(jRe))./abs(Fe);
             end
+            dFedw = problem.res.RInput*dFedw;
             
             dHdw = (dFbdw.*abs(Fe) - abs(Fb).*dFedw)./abs(Fe).^2;
             
