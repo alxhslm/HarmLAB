@@ -195,23 +195,19 @@ x0 = X(1,:).';
 U = A*feval(problem.excite,hbm,problem,w0);
 u0 = U(1,:).';
 
-States = hbm_states3d(w0,X,U,hbm);
+%compute a LU table of frequency dependent stiffness etc
+wLU = linspace(problem.wMin,problem.wMax,10);
+for i = 1:length(wLU)
+    States = hbm_states3d(wLU(i),X,U,hbm);
+    States.f = feval(problem.model,'nl',States,hbm,problem);
 
-States.f = feval(problem.model,'nl',States,hbm,problem);
+    [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
+    [Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States,hbm,problem);
 
-[K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
-[Ku_nl,Cu_nl,Mu_nl] = hbm_derivatives('nl',{'u','udot','uddot'},States,hbm,problem);
-
-K_nl  = mean(K_nl,3);  C_nl  = mean(C_nl,3);  M_nl  = mean(M_nl,3); 
-Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
-
-M  = problem.M + M_nl;
-C  = problem.C + C_nl;
-K  = problem.K + K_nl;
-
-Mu = problem.Mu + Mu_nl;
-Cu = problem.Cu + Cu_nl;
-Ku = problem.Ku + Ku_nl;
+    %find average stiffness etc over time
+    K_lu(:,:,i)  = mean(K_nl,3);  C_lu(:,:,i)  = mean(C_nl,3);  M_lu(:,:,i)  = mean(M_nl,3); 
+    Ku_lu(:,:,i) = mean(Ku_nl,3); Cu_lu(:,:,i) = mean(Cu_nl,3); Mu_lu(:,:,i) = mean(Mu_nl,3);
+end
 
 %now loop over all the frequencies
 wlin = linspace(problem.wMin,problem.wMax,1000);
@@ -223,6 +219,23 @@ NFreq = hbm.harm.NFreq;
 w = getfrequencies(wlin,hbm);
 for i = 1:length(wlin)
     w0 = wlin(i);
+    
+    %interpolate into LU table
+    M_nl = interpx(wLU,M_lu,wlin(i));
+    C_nl = interpx(wLU,C_lu,wlin(i));
+    K_nl = interpx(wLU,K_lu,wlin(i));
+    
+    Mu_nl = interpx(wLU,Mu_lu,wlin(i));
+    Cu_nl = interpx(wLU,Cu_lu,wlin(i));
+    Ku_nl = interpx(wLU,Ku_lu,wlin(i));
+ 
+    M  = problem.M + M_nl;
+    C  = problem.C + C_nl;
+    K  = problem.K + K_nl;
+
+    Mu = problem.Mu + Mu_nl;
+    Cu = problem.Cu + Cu_nl;
+    Ku = problem.Ku + Ku_nl;
     
     U = A*feval(problem.excite,hbm,problem,w0);
     
