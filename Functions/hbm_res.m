@@ -77,7 +77,7 @@ end
 z = Z.*problem.Zscale;
 
 w = abs(z(end));
-w0 = w*hbm.harm.rFreqRatio;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 x = z(1:end-1);
 
 sol.w = w;
@@ -96,23 +96,23 @@ sol.it = iter;
 function obj = hbm_obj(Z,hbm,problem,A)
 x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-H = hbm_objective('func',hbm,problem,w0,x,u);
+H = hbm_objective('func',hbm,problem,w,x,u);
 obj = - problem.res.sign * H;
 
 function G = hbm_grad(Z,hbm,problem,A)
 x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-[Dx, Dw] = hbm_objective({'jacobX','derivW'},hbm,problem,w0,x,u);
+[Dx, Dw] = hbm_objective({'jacobX','derivW'},hbm,problem,w,x,u);
 G = -problem.res.sign*[Dx Dw];
 
 G = G.*problem.Zscale(:)';
@@ -120,23 +120,23 @@ G = G.*problem.Zscale(:)';
 function c = hbm_constr(Z,hbm,problem,A)
 x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
+c = hbm_balance3d('func',hbm,problem,w,u,x);
 
 function J = hbm_jacobian(Z,hbm,problem,A)
 x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-Jx_nl = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw_nl = hbm_balance3d('derivW',hbm,problem,w0,u,x);
+Jx_nl = hbm_balance3d('jacob',hbm,problem,w,u,x);
+Dw_nl = hbm_balance3d('derivW',hbm,problem,w,u,x);
 
 J = [Jx_nl  Dw_nl];
 J = J .* problem.Jscale;

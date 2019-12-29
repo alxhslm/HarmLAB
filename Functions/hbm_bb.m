@@ -427,13 +427,14 @@ NPts = length(results);
 
 if ~isfield(results,'W')
     for i = 1:NPts
-        results(i).W = (hbm.harm.kHarm*(hbm.harm.rFreqRatio.*hbm.harm.rFreqBase)')*results(i).w;
+        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+        results(i).W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
     end
 end
 
 if ~isfield(results,'L')
     for i = 1:NPts
-        w0 = results(i).w*hbm.harm.rFreqRatio;
+        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
         results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
     end
 end
@@ -475,13 +476,13 @@ x = Z(1:end-2).*problem.xscale;
 w = Z(end-1).*problem.wscale;
 A = Z(end).*problem.Ascale;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
-c(end+1) = resonance_condition(hbm,problem,w0,x,A); 
+c = hbm_balance3d('func',hbm,problem,w,u,x);
+c(end+1) = resonance_condition(hbm,problem,w,x,A); 
 c = c ./ problem.Fscale;
 
 function J = hbm_bb_jacobian(Z,hbm,problem)
@@ -491,14 +492,14 @@ x = Z(1:end-2).*problem.xscale;
 w = Z(end-1).*problem.wscale;
 A = Z(end).*problem.Ascale;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
-Da = hbm_balance3d('derivA',hbm,problem,w0,u,x);
+Jx = hbm_balance3d('jacob' ,hbm,problem,w,u,x);
+Dw = hbm_balance3d('derivW',hbm,problem,w,u,x);
+Da = hbm_balance3d('derivA',hbm,problem,w,u,x);
 
 [~,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A);
 

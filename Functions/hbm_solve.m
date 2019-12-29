@@ -12,7 +12,7 @@ end
 
 %setup the problem for IPOPT
 %we have an initial guess vector
-w0 = w*hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 U = A*feval(problem.excite,hbm,problem,w0);
 
 hbm.bIncludeNL = true;
@@ -85,22 +85,20 @@ sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
 
 % floquet multipliers
-sol.L = hbm_floquet(hbm,problem,w0,sol.U,sol.X);
+sol.L = hbm_floquet(hbm,problem,w,sol.U,sol.X);
 
 sol.it = iter;
 
-function [c,J] = hbm_constraints(Z,hbm,problem,w0,u)
+function [c,J] = hbm_constraints(Z,hbm,problem,w,u)
 %unpack the inputs
 x = Z.*problem.xscale;
-w = w0*hbm.harm.rFreqRatio;
 c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 if nargout > 1
-    J = hbm_jacobian(Z,hbm,problem,w0,u);
+    J = hbm_jacobian(Z,hbm,problem,w,u);
 end
 
-function J = hbm_jacobian(Z,hbm,problem,w0,u)
+function J = hbm_jacobian(Z,hbm,problem,w,u)
 x = Z.*problem.xscale;
-w0 = w0*hbm.harm.rFreqRatio;
-J = hbm_balance3d('jacob',hbm,problem,w0,u,x);
+J = hbm_balance3d('jacob',hbm,problem,w,u,x);
 J = J .* problem.Jscale;

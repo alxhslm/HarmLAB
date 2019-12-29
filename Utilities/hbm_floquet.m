@@ -1,4 +1,4 @@
-function lambda = hbm_floquet(hbm,problem,w0,U,X)
+function lambda = hbm_floquet(hbm,problem,w,U,X)
 if ~(isvector(X) && size(X,1) == hbm.harm.NRetainNL)
     x = packdof(X(:,problem.iNL),hbm.harm.iRetainNL);
     u = packdof(U);
@@ -12,7 +12,7 @@ if any(isnan(x) | isinf(x))
     return
 end
 
-[A,B] = floquetMatrices(hbm,problem,w0,u,x);
+[A,B] = floquetMatrices(hbm,problem,w,u,x);
 lambda = eig(A,B,'vector');
 [~,iSort] = sort(abs(imag(lambda)));
 lambda = lambda(iSort);
@@ -23,7 +23,7 @@ lambda = lambda(iSort);
 
 % lambda = lambda((1:2*problem.NDof),:);
 
-function [A,B] = floquetMatrices(hbm,problem,w0,u,x)
+function [A,B] = floquetMatrices(hbm,problem,w,u,x)
 hbm.bIncludeNL = 1;
 NPts = size(u,2);
 % h = waitbar(0,'Computing matrices');
@@ -31,9 +31,9 @@ NPts = size(u,2);
 A = zeros(2*size(x,1),2*size(x,1),NPts);
 B = zeros(2*size(x,1),2*size(x,1),NPts);
 for i = 1:NPts
-    D0 = hbm_balance3d('floquet0',hbm,problem,w0(i,:),u(:,i),x(:,i));
-    D1 = hbm_balance3d('floquet1',hbm,problem,w0(i,:),u(:,i),x(:,i));
-    D2 = hbm_balance3d('floquet2',hbm,problem,w0(i,:),u(:,i),x(:,i));
+    D0 = hbm_balance3d('floquet0',hbm,problem,w(i),u(:,i),x(:,i));
+    D1 = hbm_balance3d('floquet1',hbm,problem,w(i),u(:,i),x(:,i));
+    D2 = hbm_balance3d('floquet2',hbm,problem,w(i),u(:,i),x(:,i));
 
     % lambda = polyeig(D0,D1,D2);
 

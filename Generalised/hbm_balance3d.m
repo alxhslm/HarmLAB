@@ -1,9 +1,11 @@
-function varargout = hbm_balance3d(command,hbm,problem,w0,u,x)
+function varargout = hbm_balance3d(command,hbm,problem,w,u,x)
 if hbm.options.bUseStandardHBM
-    [varargout{1:nargout}] = hbm_balance(command,hbm,problem,w0(1),u,x);
+    [varargout{1:nargout}] = hbm_balance(command,hbm,problem,w,u,x);
     return;
 end
 NDofTot = hbm.harm.NRetain;
+
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
@@ -55,25 +57,24 @@ switch command
         J = Jl - Jnl;
         varargout{1} = J;
     case 'derivW' %dF_dw, used by hbm_frf & hbm_bb
-        W = w0(1)/hbm.harm.rFreqRatio(1);
         r = hbm.harm.rFreqRatio;
-        Dl = 2*prod(r)*W*hbm.lin.Bx*u - 2*prod(r)*W*hbm.lin.Ax*x;
+        Dl = (r(1)*w0(2) + r(2)*w0(1))*(hbm.lin.Bx*u - hbm.lin.Ax*x);
         for k = 1:2
-            Dl = Dl + (hbm.lin.Bc{k}*r(k) + 2*r(k)^2*W*hbm.lin.Bm{k})*u - (hbm.lin.Ac{k}*r(k) + 2*r(k)^2*W*hbm.lin.Am{k})*x;
+            Dl = Dl + (hbm.lin.Bc{k}*r(k) + 2*r(k)*w0(k)*hbm.lin.Bm{k})*u - (hbm.lin.Ac{k}*r(k) + 2*r(k)*w(k)*hbm.lin.Am{k})*x;
         end
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
                     [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
                     Dnl1 = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x + (r(1)*Judot{1} + r(2)*Judot{2})*u + r(1)*Dw{1} + r(2)*Dw{2}  + ... 
-                            2*r(1)*W*Jxddot{1}*x + 2*r(2)*W*Jxddot{2}*x + 2*prod(r)*W*Jxddot{3}*x + ...
-                            2*r(1)*W*Juddot{1}*u + 2*r(2)*W*Juddot{2}*u + 2*prod(r)*W*Juddot{3}*u;
+                            2*w0(1)*Jxddot{1}*x + 2*w0(2)*Jxddot{2}*x + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3}*x + ...
+                            2*w0(1)*Juddot{1}*u + 2*w0(2)*Juddot{2}*u + (r(1)*w0(2) + r(2)*w0(1))*Juddot{3}*u;
                 else
                     c0 = hbm_nonlinear3d('func',hbm,problem,w0,x,u);
                     h = 1E-3;
                     for i = 1:2
-                        w = w0; w(i) = w(i) + h;
-                        c = hbm_nonlinear3d('func',hbm,problem,w,x,u);
+                        w02 = w0; w02(i) = w02(i) + h;
+                        c = hbm_nonlinear3d('func',hbm,problem,w02,x,u);
                         Dw2{i} =  (c-c0)./h;
                     end
                     Dnl2 = Dw2{1}*r(1) + Dw2{2}*r(2);
@@ -105,7 +106,7 @@ switch command
         D = Dl - Dnl;
         varargout{1} = D;
     case 'floquet0'
-        D0 = -hbm_balance3d('jacob',hbm,problem,w0,u,x);
+        D0 = -hbm_balance3d('jacob',hbm,problem,w,u,x);
         varargout{1} = D0;
     case 'floquet1' % D2*l^2 + D1*l + D0 = 0, used to solve for floquet multipliers
         D1l = hbm.lin.floquet.D1xdot;

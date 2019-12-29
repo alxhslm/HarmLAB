@@ -440,14 +440,14 @@ NPts = length(results);
 
 if ~isfield(results,'W')
     for i = 1:NPts
-        results(i).W = (hbm.harm.kHarm*(hbm.harm.rFreqRatio.*hbm.harm.rFreqBase)')*results(i).w;
+        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+        results(i).W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
     end
 end
 
 if ~isfield(results,'L')
     for i = 1:NPts
-        w0 = results(i).w*hbm.harm.rFreqRatio;
-        results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
+        results(i).L = hbm_floquet(hbm,problem,results(i).w,results(i).U,results(i).X);
     end
 end
 
@@ -488,12 +488,12 @@ x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
+c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 
 function J = hbm_frf_jacobian(Z,hbm,problem)
@@ -502,13 +502,13 @@ x = Z(1:end-1).*problem.xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
+Jx = hbm_balance3d('jacob' ,hbm,problem,w,u,x);
+Dw = hbm_balance3d('derivW',hbm,problem,w,u,x);
 
 J = [Jx Dw];
 J = J .* problem.Jscale;

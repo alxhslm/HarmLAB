@@ -20,8 +20,8 @@ end
 harm.NHarm = max(NHarmGroup,[],1);
 
 %now default missing fields
-f = {'Nfft','rFreqRatio','rFreqBase'};
-d = {max(8*harm.NHarm,1),0*harm.NHarm+1,0*harm.NHarm+1};
+f = {'Nfft','rFreqRatio','rFreqBase','wFreq0'};
+d = {max(8*harm.NHarm,1),0*harm.NHarm+1,0*harm.NHarm+1,0*harm.NHarm};
 for i = 1:length(f)
     if ~isfield(harm,f{i})
         harm.(f{i}) = d{i};

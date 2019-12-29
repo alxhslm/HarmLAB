@@ -1,13 +1,13 @@
-function varargout = get_time_series3d(hbm,w0,X,tspan)
+function varargout = get_time_series3d(hbm,w,X,tspan)
 if hbm.options.bUseStandardHBM
-    [varargout{1:nargout}] = get_time_series(hbm,problem,w0,u,X);
+    [varargout{1:nargout}] = get_time_series(hbm,problem,w,u,X);
     return;
 end
 
 NHarm = hbm.harm.NHarm;
 Nfft = hbm.harm.Nfft;
 kHarm  = hbm.harm.kHarm;
-w0 = w0 * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 %unpack the inputs
 w = kHarm(:,1)*w0(1) + kHarm(:,2)*w0(2);

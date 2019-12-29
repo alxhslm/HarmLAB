@@ -86,7 +86,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 function ws = getfrequencies(w0,hbm)
-w = (hbm.harm.rFreqBase.*hbm.harm.rFreqRatio)'*w0;
+w = hbm.harm.rFreqBase'.*(hbm.harm.rFreqRatio'*w0 + hbm.harm.wFreq0);
 ws = abs(hbm.harm.kHarm(:,1)*w(1,:) + hbm.harm.kHarm(:,2)*w(2,:));
 ws(ws == 0) = w0;
 
@@ -183,9 +183,9 @@ if isempty(s)
     s = '0';
 end
 
-function [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A)
+function [xlin, wlin] = getLinearReponse(hbm,problem,X,w,A)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
-w0 = w0*hbm.harm.rFreqRatio;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 wB = w0.*hbm.harm.rFreqBase;
 NHarm = hbm.harm.NHarm;
 Nfft = hbm.harm.Nfft;

@@ -173,9 +173,9 @@ if isempty(s)
     s = '0';
 end
 
-function [xlin, Alin] = getLinearReponse(hbm,problem,X,w0)
+function [xlin, Alin] = getLinearReponse(hbm,problem,X,w)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
-w0 = w0*hbm.harm.rFreqRatio;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 wB = w0.*hbm.harm.rFreqBase;
 NHarm = hbm.harm.NHarm;
 Nfft = hbm.harm.Nfft;
