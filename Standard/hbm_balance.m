@@ -18,7 +18,7 @@ switch command
         c = R*(cl - cnl);
         varargout{1} = c;
     case 'jacob' %dF_dX, used by hbm_frf & hbm_bb
-        Jl = -A;        
+        Jl = -A;
         if hbm.bIncludeNL
             if hbm.options.bAnalyticalDerivs
                 [Jx,Jxdot,Jxddot] = hbm_nonlinear({'jacobX','jacobXdot','jacobXddot'},hbm,problem,w0,x,u);
@@ -50,22 +50,27 @@ switch command
         Dl = dBdw*u - dAdw*x;
         cl = B*u - hbm.lin.b - A*x;
         if hbm.bIncludeNL
-            if hbm.options.bAnalyticalDerivs
-                [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
-                Dxdot = Jxdot*x;
-                Dxddot = 2*w0*Jxddot*x;
-                Du = (Judot + 2*w0*Juddot)*u;
-                Dnl1 = Dxdot + Dxddot + Du + Dw;
+            if hbm.dependence.xdot || hbm.dependence.w
+                if hbm.options.bAnalyticalDerivs
+                    [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                    Dxdot = Jxdot*x;
+                    Dxddot = 2*w0*Jxddot*x;
+                    Dudot = Judot*u;
+                    Duddot = 2*w0*Juddot*u;
+                    Dnl1 = Dxdot + Dxddot + Dudot + Duddot + Dw;
+                else
+                    cnl = hbm_nonlinear('func',hbm,problem,w0,x,u);
+                    h = 1E-10;
+                    c = hbm_nonlinear('func',hbm,problem,w0+h,x,u);
+                    Dnl2 = (c-cnl)./h;
+                end
+                if hbm.options.bAnalyticalDerivs
+                    Dnl = Dnl1;
+                else
+                    Dnl = Dnl2;
+                end
             else
-                cnl = hbm_nonlinear('func',hbm,problem,w0,x,u);
-                h = 1E-10;
-                c = hbm_nonlinear('func',hbm,problem,w0+h,x,u);
-                Dnl2 = (c-cnl)./h;
-            end
-            if hbm.options.bAnalyticalDerivs
-                Dnl = Dnl1;
-            else
-                Dnl = Dnl2;
+                Dnl = 0*Dl;
             end
         else
             cnl = 0*x;

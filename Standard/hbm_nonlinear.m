@@ -39,7 +39,7 @@ switch hbm.options.aft_method
 end
 
 Fp = packdof(F,iRetain);
-  
+
 if ~iscell(command)
     command = {command};
 end
@@ -60,7 +60,11 @@ for o = 1:length(command)
                 Dw = zeros(NRetain,1);
             else
                 dfhbm_dw = hbm_derivatives('nl' ,'w',States,hbm,problem);
-                Dw = packdof(hbm.nonlin.FFT*dfhbm_dw{1},iRetain); 
+                if isfield(problem,'derivW')
+                    Dw = feval(problem.derivW,dfhbm_dw,hbm,problem);
+                else
+                    Dw = packdof(hbm.nonlin.FFT*dfhbm_dw{1},iRetain);
+                end
             end
             varargout{o} = Dw;
         case 'jacobX'  %df_dX = Jx*X
@@ -290,7 +294,7 @@ for o = 1:length(command)
            if ~hbm.dependence.xdot
                 D1 = zeros(NRetain,NRetainNL);
             else
-                States.df_dxdot = hbm_derivatives('nl' ,'xdot',States,hbm,problem);
+                States.df_dxdot = hbm_derivatives('nl','xdot',States,hbm,problem);
                 
                 if isfield(problem,'floquet1xdot')
                     D1 = feval(problem.floquet1xdot,States,hbm,problem);
