@@ -11,7 +11,7 @@ if ~isfield(hbm,'options')
     hbm.options = struct();
 end
 hbm.options = setupOptions(hbm.options);
-if hbm.options.bUseStandardHBM && hbm.harm.NHarm(2) > 0
+if hbm.options.bUseStandardHBM && prod(hbm.harm.NHarm) > 0
     error('Cannot use standard HBM code in case of more than one fundemental')
 end
 

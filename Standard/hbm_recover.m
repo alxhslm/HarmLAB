@@ -1,6 +1,10 @@
-function x = hbm_recover(hbm,problem,w0,u,xnl)
+function x = hbm_recover(hbm,problem,w,u,xnl)
 NNL = problem.NNL;
 iRetainNL = hbm.harm.iRetainNL;
+
+ii = find(hbm.harm.NHarm ~= 0);
+r = hbm.harm.rFreqRatio(ii);
+w0 = w * r + hbm.harm.wFreq0(ii);
 
 if ~(isvector(xnl) && size(xnl,1) == hbm.harm.NComp*NNL)
     bUnpacked = 1;
@@ -13,8 +17,8 @@ end
 if problem.NNL ~= problem.NDof
     f = hbm_nonlinear('func',hbm,problem,w0,xnl,u);
     
-    A = (hbm.lin.Ak{1} + w0*hbm.lin.Ac{1} + w0^2*hbm.lin.Am{1});
-    B = (hbm.lin.Bk{1} + w0*hbm.lin.Bc{1} + w0^2*hbm.lin.Bm{1});
+    A = (hbm.lin.Ak{ii} + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
+    B = (hbm.lin.Bk{ii} + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
     
     
     iLin = hbm.harm.iLin;

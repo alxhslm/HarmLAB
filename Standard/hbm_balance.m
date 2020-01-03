@@ -1,12 +1,17 @@
-function varargout = hbm_balance(command,hbm,problem,w0,u,x)
+function varargout = hbm_balance(command,hbm,problem,w,u,x)
 NDofTot = hbm.harm.NComp*problem.NDof;
 NNLTot = hbm.harm.NComp*problem.NNL;
 
-A = (hbm.lin.Ak{1} + w0*hbm.lin.Ac{1} + w0^2*hbm.lin.Am{1});
-B  = (hbm.lin.Bk{1} + w0*hbm.lin.Bc{1} + w0^2*hbm.lin.Bm{1});
-dA0dw = (hbm.lin.Ac{1} + 2*w0*hbm.lin.Am{1});
-dBdw  = (hbm.lin.Bc{1} + 2*w0*hbm.lin.Bm{1});
+ii = find(hbm.harm.NHarm ~= 0);
+r = hbm.harm.rFreqRatio(ii);
+w0 = w * r + hbm.harm.wFreq0(ii);
+
+A  = (hbm.lin.Ak{ii} + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
+B  = (hbm.lin.Bk{ii} + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
+dA0dw = r*(hbm.lin.Ac{ii} + 2*w0*hbm.lin.Am{ii});
+dBdw  = r*(hbm.lin.Bc{ii} + 2*w0*hbm.lin.Bm{ii});
 [A,R,dAdw,dRdw] = hbm_reduce(hbm,problem,A,dA0dw);
+
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
         cl = B*u - hbm.lin.b - A*x;
@@ -53,16 +58,16 @@ switch command
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
                     [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
-                    Dxdot = Jxdot*x;
-                    Dxddot = 2*w0*Jxddot*x;
-                    Dudot = Judot*u;
-                    Duddot = 2*w0*Juddot*u;
+                    Dxdot = r*Jxdot*x;
+                    Dxddot = 2*r*w0*Jxddot*x;
+                    Dudot = r*Judot*u;
+                    Duddot = 2*r*w0*Juddot*u;
                     Dnl1 = Dxdot + Dxddot + Dudot + Duddot + Dw;
                 else
                     cnl = hbm_nonlinear('func',hbm,problem,w0,x,u);
                     h = 1E-10;
                     c = hbm_nonlinear('func',hbm,problem,w0+h,x,u);
-                    Dnl2 = (c-cnl)./h;
+                    Dnl2 = r*(c-cnl)./h;
                 end
                 if hbm.options.bAnalyticalDerivs
                     Dnl = Dnl1;
@@ -92,7 +97,7 @@ switch command
         D0 = -hbm_balance('jacob',hbm,problem,w0,u,x);
         varargout{1} = D0;
     case 'floquet1'
-        D1l = hbm.lin.floquet.D1xdot + 2*hbm.lin.floquet.D1xddot{1}*w0;
+        D1l = hbm.lin.floquet.D1xdot + 2*hbm.lin.floquet.D1xddot{ii}*w0;
         if hbm.bIncludeNL
             [D1xdot,D1xddot] = hbm_nonlinear({'floquet1xdot','floquet1xddot'},hbm,problem,w0,x,u);
             D1nl = D1xdot + 2*D1xddot*w0;

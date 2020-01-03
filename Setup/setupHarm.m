@@ -81,6 +81,14 @@ if isfield(group,'kHarm')
 elseif isfield(group,'NHarm')
     if length(group.NHarm) == 1
         group.kHarm = (0:group.NHarm)';
+    elseif group.NHarm(1) == 0
+        k2 = 0:group.NHarm(2);
+        k1 = 0*k2;
+        group.kHarm = [k1(:) k2(:)];
+    elseif group.NHarm(2) == 0
+        k1 = 0:group.NHarm(1);
+        k2 = 0*k1;
+        group.kHarm = [k1(:) k2(:)];
     else
         k1 = -group.NHarm(1):group.NHarm(1);
         k2 = -group.NHarm(2):group.NHarm(2);

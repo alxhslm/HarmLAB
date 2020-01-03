@@ -1,8 +1,10 @@
 function States = hbm_states(w0,X,U,hbm)
+ii = find(hbm.harm.NHarm ~= 0);
+
 NFreq = hbm.harm.NFreq;
-Nfft  = hbm.harm.Nfft(1);
-kHarm = hbm.harm.kHarm(:,1);
-wBase = hbm.harm.rFreqBase(1)*w0;
+Nfft  = hbm.harm.Nfft(ii);
+kHarm = hbm.harm.kHarm(:,ii);
+wBase = hbm.harm.rFreqBase(ii)*w0;
 
 %unpack the inputs
 w = kHarm*wBase;

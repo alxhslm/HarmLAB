@@ -3,10 +3,12 @@ NInput = problem.NInput;
 NNL = problem.NNL;
 NDof = problem.NDof;
 
+ii = find(hbm.harm.NHarm ~= 0);
+
 NFreq = hbm.harm.NFreq;
 NComp = hbm.harm.NComp;
-Nfft  = hbm.harm.Nfft(1);
-kHarm = hbm.harm.kHarm(:,1);
+Nfft  = hbm.harm.Nfft(ii);
+kHarm = hbm.harm.kHarm(:,ii);
 
 iRetain = hbm.harm.iRetain;
 NRetain = hbm.harm.NRetain;
@@ -156,7 +158,7 @@ for o = 1:length(command)
                  else
                      switch hbm.options.jacob_method
                          case 'mat'
-                             Jxdot = sum(hbm.nonlin.hbm.Jxdot{1}.*States.df_dxdot(ijacobx,ijacobxnl,:),3);
+                             Jxdot = sum(hbm.nonlin.hbm.Jxdot{ii}.*States.df_dxdot(ijacobx,ijacobxnl,:),3);
                          case 'sum'
                              theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                              
@@ -192,7 +194,7 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Judot = sum(hbm.nonlin.hbm.Judot{1}.*States.df_dudot(ijacobx,ijacobu,:),3);
+                            Judot = sum(hbm.nonlin.hbm.Judot{ii}.*States.df_dudot(ijacobx,ijacobu,:),3);
                         case 'sum'
                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
@@ -228,7 +230,7 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Jxddot = sum(hbm.nonlin.hbm.Jxddot{1}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
+                            Jxddot = sum(hbm.nonlin.hbm.Jxddot{ii}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                         case 'sum'
                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
@@ -264,7 +266,7 @@ for o = 1:length(command)
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            Juddot = sum(hbm.nonlin.hbm.Juddot{1}.*States.df_duddot(ijacobx,ijacobu,:),3);
+                            Juddot = sum(hbm.nonlin.hbm.Juddot{ii}.*States.df_duddot(ijacobx,ijacobu,:),3);
                         case 'sum'
                             theta = permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]);
                             
