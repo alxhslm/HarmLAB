@@ -6,8 +6,8 @@ ii = find(hbm.harm.NHarm ~= 0);
 r = hbm.harm.rFreqRatio(ii);
 w0 = w * r + hbm.harm.wFreq0(ii);
 
-A  = (hbm.lin.Ak{ii} + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
-B  = (hbm.lin.Bk{ii} + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
+A  = (hbm.lin.Ak + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
+B  = (hbm.lin.Bk + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
 dA0dw = r*(hbm.lin.Ac{ii} + 2*w0*hbm.lin.Am{ii});
 dBdw  = r*(hbm.lin.Bc{ii} + 2*w0*hbm.lin.Bm{ii});
 [A,R,dAdw,dRdw] = hbm_reduce(hbm,problem,A,dA0dw);

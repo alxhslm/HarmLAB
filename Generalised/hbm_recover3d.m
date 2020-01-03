@@ -12,11 +12,11 @@ end
 if problem.NNL ~= problem.NDof
     f = hbm_nonlinear('func',hbm,problem,w0,xnl,u);
     
-    A = prod(w0)*hbm.lin.Ax;
-    B = prod(w0)*hbm.lin.Bx;
+    A = hbm.lin.Ak + prod(w0)*hbm.lin.Ax;
+    B = hbm.lin.Bk + prod(w0)*hbm.lin.Bx;
     for k = 1:2
-        A = (hbm.lin.Ak{k} + w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
-        B = (hbm.lin.Bk{k} + w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
+        A = (w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
+        B = (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
     end
     
     iLin = hbm.harm.iLin;

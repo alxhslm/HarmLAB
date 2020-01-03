@@ -17,8 +17,8 @@ end
 if problem.NNL ~= problem.NDof
     f = hbm_nonlinear('func',hbm,problem,w0,xnl,u);
     
-    A = (hbm.lin.Ak{ii} + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
-    B = (hbm.lin.Bk{ii} + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
+    A = (hbm.lin.Ak + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
+    B = (hbm.lin.Bk + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
     
     
     iLin = hbm.harm.iLin;

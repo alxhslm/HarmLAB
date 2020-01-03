@@ -9,13 +9,13 @@ NNLTot = hbm.harm.NComp*problem.NNL;
 r = hbm.harm.rFreqRatio;
 w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
-A = prod(w0)*hbm.lin.Ax;
-B = prod(w0)*hbm.lin.Bx;
+A = hbm.lin.Ak + prod(w0)*hbm.lin.Ax;
+B = hbm.lin.Bk + prod(w0)*hbm.lin.Bx;
 dA0dw = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Ax;
 dBdw = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Bx;
 for k = 1:2
-    A = A + (hbm.lin.Ak{k} + w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
-    B = B + (hbm.lin.Bk{k} + w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
+    A = A + (w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
+    B = B + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
 
     dA0dw = dA0dw + (r(k)*hbm.lin.Ac{1} + 2*w0(k)*r(k)*hbm.lin.Am{1});
     dBdw  = dBdw  + (r(k)*hbm.lin.Bc{1} + 2*w0(k)*r(k)*hbm.lin.Bm{1});
