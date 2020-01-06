@@ -1,8 +1,10 @@
-function varargout = hbm_objective(part,hbm,problem,w0,x,u)
+function varargout = hbm_objective(part,hbm,problem,w,x,u)
 
 NOutput = problem.res.NOutput;
 NInput = problem.res.NInput;
 
+r = hbm.harm.rFreqRatio;
+w0 = w .* r + hbm.harm.wFreq0;
 
 if problem.res.iHarm > 1
     iRe = (1:NOutput)' + 2*(problem.res.iHarm - 2)*NOutput + NOutput;
@@ -18,11 +20,10 @@ else
     jIm = [];
 end
 
-W = w0(1)/hbm.harm.rFreqRatio(1);
-r = hbm.harm.kHarm*(hbm.harm.rFreqBase.*hbm.harm.rFreqRatio)';
+kk = hbm.harm.kHarm*(hbm.harm.rFreqBase.*hbm.harm.rFreqRatio)';
 D = [0 -1;
-    1  0];
-D = blkdiag(0,kron(diag(r(2:end)),D));
+     1  0];
+D = blkdiag(0,kron(diag(kk(2:end)),D));
 
 %% output
 Wx = kron(D,eye(problem.NDof));
@@ -34,9 +35,9 @@ switch problem.res.output
     case 'x'
         Fnl = x;
     case 'xdot'
-        Fnl = W*Wx*x;
+        Fnl = w*Wx*x;
     case 'xddot'
-        Fnl = W^2*Wx*Wx*x;
+        Fnl = w^2*Wx*Wx*x;
 end
 
 Fb = Fnl(iRe);
@@ -59,9 +60,9 @@ switch problem.res.input
     case 'u'
         Fex = u;
     case 'udot'
-        Fex = W * Wu*u;
+        Fex = w * Wu*u;
     case 'uddot'
-        Fex = W^2 * Wu*Wu*u;
+        Fex = w^2 * Wu*Wu*u;
 end
 
 Fe = Fex(jRe);
@@ -114,8 +115,7 @@ for i = 1:length(part)
             
             varargout{i} = dHdx;
         case 'derivW'
-            r = hbm.harm.rFreqRatio;
-            
+           
             %nl
             switch problem.res.output
                 case 'none'
@@ -134,7 +134,7 @@ for i = 1:length(part)
                 case 'xdot'
                     Dw_nl = (Wx*x);
                 case 'xddot'
-                    Dw_nl = 2*W*(Wx*Wx*x);
+                    Dw_nl = 2*w*(Wx*Wx*x);
             end
             if ~isempty(iIm)
                 dFbdw = (real(Fb)*Dw_nl(iRe) + imag(Fb)*Dw_nl(iIm))./(abs(Fb) + eps);
@@ -148,16 +148,16 @@ for i = 1:length(part)
                 case 'unity'
                     Dw_u = 0*u;
                 case 'fe'
-                    Dw_u = 2*prod(r)*W*hbm.lin.Bx*u;
+                    Dw_u = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Bx*u;
                     for k = 1:2
-                        Dw_u = Dw_u + (hbm.lin.Bc{k}*r(k) + 2*r(k)^2*W*hbm.lin.Bm{k})*u;
+                        Dw_u = Dw_u + r(k)*(hbm.lin.Bc{k}* + 2*w0(k)*hbm.lin.Bm{k})*u;
                     end
                 case 'u'
                     Dw_u = zeros(problem.NInput*hbm.harm.NComp,1);
                 case 'udot'
                     Dw_u = (Wu*u);
                 case 'uddot'
-                    Dw_u = 2*W*(Wu*Wu*u);
+                    Dw_u = 2*w*(Wu*Wu*u);
             end
             if ~isempty(iIm)
                 dFedw = (real(Fe)*Dw_u(jRe) + imag(Fe)*Dw_u(jIm))./abs(Fe);

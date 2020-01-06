@@ -581,10 +581,12 @@ curr.sPred = pred.step;
 curr.it = corr.it;
 curr.flag = '';
 
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+
 curr.w = w;
 curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-curr.U = A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
-curr.F = hbm_output3d(hbm,problem,curr.w*hbm.harm.rFreqRatio,curr.U,curr.X);
+curr.U = A*feval(problem.excite,hbm,problem,w0);
+curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;
 
 u = packdof(curr.U);

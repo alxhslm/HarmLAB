@@ -1,17 +1,32 @@
 function sol = hbm_res(hbm,problem,w,A,X0)
 problem.type = 'resonance';
 
+if nargin < 5 || isempty(X0)
+    X0 = zeros(hbm.harm.NFreq,problem.NDof);
+end
+if isvector(X0) 
+    if length(X0) == hbm.harm.NComp*problem.NDof
+        x0 = X0;
+    else
+        error('Wrong size for X0');
+    end
+else
+    if size(X0,1) == hbm.harm.NFreq && size(X0,2) == problem.NDof
+        x0 = packdof(X0);
+    else
+        error('Wrong size for X0');
+    end
+end
+
 NDof = problem.NDof;
-Nfft  = hbm.harm.Nfft;
 
 %setup the problem for IPOPT
 
 hbm.bIncludeNL = 1;
 NComp = hbm.harm.NComp;
-Nhbm  = hbm.harm.NRetain;
 
 %first solve @ w0
-sol = hbm_solve(hbm,problem,w,A,X0);
+sol = hbm_solve(hbm,problem,w,A,x0);
 X0 = sol.X;
 x0 = packdof(X0);
 
@@ -84,12 +99,12 @@ sol.w = w;
 sol.A = A;
 sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
 sol.U = A*feval(problem.excite,hbm,problem,w0);
-sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
+sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 %floquet multipliers & objective
 u = packdof(sol.U);
-sol.H = hbm_objective('complex',hbm,problem,w0,x,u);
-sol.L = hbm_floquet(hbm,problem,w0,u,x);
+sol.H = hbm_objective('complex',hbm,problem,w,x,u);
+sol.L = hbm_floquet(hbm,problem,w,u,x);
 
 sol.it = iter;
 

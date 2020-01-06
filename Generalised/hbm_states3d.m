@@ -7,8 +7,8 @@ wBase = hbm.harm.rFreqBase.*w0;
 
 %unpack the inputs
 w = kHarm*wBase';
-t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/wBase(1);
-t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/wBase(2);
+t1 = (0:Nfft(1)-1)/Nfft(1)*2*pi/(wBase(1)+eps);
+t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/(wBase(2)+eps);
 [t1,t2] = ndgrid(t1,t2);
 States.t = [t1(:) t2(:)].';
 

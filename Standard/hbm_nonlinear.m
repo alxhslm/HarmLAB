@@ -333,40 +333,40 @@ for o = 1:length(command)
             varargout{o} = D1;
         case 'floquet1xddot'
            if ~hbm.dependence.xddot
-                D1 = zeros(NRetain,NRetainNL);
+                D1dd = zeros(NRetain,NRetainNL);
             else
                 States.df_dxddot = hbm_derivatives('nl' ,'xddot',States,hbm,problem);
                 
                 if isfield(problem,'floquet1xddot')
-                    D1 = feval(problem.floquet1xddot,States,hbm,problem);
+                    D1dd = feval(problem.floquet1xddot,States,hbm,problem);
                 else
                     switch hbm.options.jacob_method
                         case 'mat'
-                            D1 = sum(hbm.nonlin.hbm.Jxdot{1}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
+                            D1dd = sum(hbm.nonlin.hbm.Jxdot{ii}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                         case 'sum'
                             theta = repmat(permute(2*pi/Nfft*(0:(Nfft-1)),[1 3 2]),NNL,NNL,1);
                             
-                            D1 = zeros(NRetain,NRetainNL);
+                            D1dd = zeros(NRetain,NRetainNL);
                             for l = 1:(NFreq-1)
                                 [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                D1(1:NDof,(2*l-1)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl)/Nfft,3);
-                                D1(1:NDof,(2*l-0)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl)/Nfft,3);
+                                D1dd(1:NDof,(2*l-1)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl)/Nfft,3);
+                                D1dd(1:NDof,(2*l-0)*NNL+(1:NNL)) =  sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl)/Nfft,3);
                             end
                             for k = 1:(NFreq-1)
                                 [ck, sk] = cosAndSin(kHarm(k+1,1)*theta);
                                 for l = 1:(NFreq-1)
                                     [cl, sl] = cosAndSin(kHarm(l+1,1)*theta);
-                                    D1((2*k-1)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*ck/Nfft,3);
-                                    D1((2*k-1)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*ck/Nfft,3);
-                                    D1((2*k-0)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*sk/Nfft,3);
-                                    D1((2*k-0)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*sk/Nfft,3);
+                                    D1dd((2*k-1)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*ck/Nfft,3);
+                                    D1dd((2*k-1)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) =  2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*ck/Nfft,3);
+                                    D1dd((2*k-0)*NDof+(1:NDof),(2*l-1)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*sl).*sk/Nfft,3);
+                                    D1dd((2*k-0)*NDof+(1:NDof),(2*l-0)*NNL+(1:NNL)) = -2*sum((-kHarm(l+1,1)*States.df_dxddot(:,iNL,:).*cl).*sk/Nfft,3);
                                 end
                             end
-                            D1 = D1(iRetain,iRetainNL);
+                            D1dd = D1dd(iRetain,iRetainNL);
                     end
                 end
             end
-            varargout{o} = D1;
+            varargout{o} = D1dd;
             
        case 'floquet2'
            if ~hbm.dependence.xddot

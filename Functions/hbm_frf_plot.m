@@ -86,7 +86,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 function ws = getfrequencies(w0,hbm)
-w = hbm.harm.rFreqBase'.*(hbm.harm.rFreqRatio'*w0 + hbm.harm.wFreq0);
+w = hbm.harm.rFreqBase'.*(hbm.harm.rFreqRatio'*w0 + hbm.harm.wFreq0');
 ws = abs(hbm.harm.kHarm(:,1)*w(1,:) + hbm.harm.kHarm(:,2)*w(2,:));
 ws(ws == 0) = w0;
 
@@ -198,7 +198,8 @@ u0 = U(1,:).';
 %compute a LU table of frequency dependent stiffness etc
 wLU = linspace(problem.wMin,problem.wMax,10);
 for i = 1:length(wLU)
-    States = hbm_states3d(wLU(i),X,U,hbm);
+    w0 = wLU(i) * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+    States = hbm_states3d(w0,X,U,hbm);
     States.f = feval(problem.model,'nl',States,hbm,problem);
 
     [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
@@ -218,7 +219,7 @@ NFreq = hbm.harm.NFreq;
 %work out frequencies
 w = getfrequencies(wlin,hbm);
 for i = 1:length(wlin)
-    w0 = wlin(i);
+    w0 = wlin(i) * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
     
     %interpolate into LU table
     M_nl = interpx(wLU,M_lu,wlin(i));

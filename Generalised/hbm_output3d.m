@@ -1,6 +1,6 @@
-function o = hbm_output3d(hbm,problem,w0,u,x)
+function o = hbm_output3d(hbm,problem,w,u,x)
 if hbm.options.bUseStandardHBM
-    o = hbm_output(hbm,problem,w0(1),u,x);
+    o = hbm_output(hbm,problem,w,u,x);
     return;
 end
 
@@ -13,6 +13,9 @@ NFreq  = hbm.harm.NFreq;
 Nfft   = hbm.harm.Nfft;
 
 iRetain = hbm.harm.iRetain;
+
+r = hbm.harm.rFreqRatio;
+w0 = w .* r + hbm.harm.wFreq0;
 
 if isvector(x)
     X = unpackdof(x,NFreq-1,NDof,iRetain);

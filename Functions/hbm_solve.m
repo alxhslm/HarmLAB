@@ -4,10 +4,18 @@ problem.type = 'solve';
 if nargin < 5 || isempty(X0)
     X0 = zeros(hbm.harm.NFreq,problem.NDof);
 end
-if ~isvector(X0)  && size(X0,1) == hbm.harm.NComp*problem.NDof
-    x0 = X0;
+if isvector(X0) 
+    if length(X0) == hbm.harm.NComp*problem.NDof
+        x0 = X0;
+    else
+        error('Wrong size for X0');
+    end
 else
-    x0 = packdof(X0(:,problem.iNL),hbm.harm.iRetainNL);
+    if size(X0,1) == hbm.harm.NFreq && size(X0,2) == problem.NDof
+        x0 = packdof(X0);
+    else
+        error('Wrong size for X0');
+    end
 end
 
 %setup the problem for IPOPT
@@ -19,8 +27,6 @@ hbm.bIncludeNL = true;
 
 u = packdof(U);
 
-iRetain = hbm.harm.iRetain;
-NComp = hbm.harm.NComp;
 NRetainNL  = hbm.harm.NRetainNL;
 
 init.X = X0;
@@ -45,7 +51,7 @@ bSuccess = false;
 constr_tol = 1E-6;
 maxit = 20;
 
-z0 = x0;
+z0 = x0(hbm.harm.iNL);
 Z0 = z0./problem.xscale;
 
 attempts = 0;
@@ -75,14 +81,14 @@ if ~bSuccess
 end
 z = Z.*problem.Zscale;
 
-x = hbm_recover(hbm,problem,w0(1),u,z);
+x = hbm_recover3d(hbm,problem,w,u,z);
 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
 
 sol.w = w;
 sol.A = A;
 sol.X = X;
 sol.U = U;
-sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
+sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 % floquet multipliers
 sol.L = hbm_floquet(hbm,problem,w,sol.U,sol.X);

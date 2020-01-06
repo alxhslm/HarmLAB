@@ -585,8 +585,10 @@ curr.sPred = pred.step;
 curr.it = corr.it;
 curr.flag = '';
 
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+
 curr.w = w;
-curr.U = A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
-curr.X = hbm_recover(hbm,problem,curr.w*hbm.harm.rFreqRatio(1),curr.U,Xnl);
-curr.F = hbm_output3d(hbm,problem,curr.w*hbm.harm.rFreqRatio,curr.U,curr.X);
+curr.U = A*feval(problem.excite,hbm,problem,w0);
+curr.X = hbm_recover3d(hbm,problem,curr.w,curr.U,Xnl);
+curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;

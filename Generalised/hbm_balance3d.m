@@ -7,7 +7,7 @@ NDofTot = hbm.harm.NRetain;
 NNLTot = hbm.harm.NComp*problem.NNL;
 
 r = hbm.harm.rFreqRatio;
-w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+w0 = w .* r + hbm.harm.wFreq0;
 
 A = hbm.lin.Ak + prod(w0)*hbm.lin.Ax;
 B = hbm.lin.Bk + prod(w0)*hbm.lin.Bx;
@@ -17,8 +17,8 @@ for k = 1:2
     A = A + (w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
     B = B + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
 
-    dA0dw = dA0dw + (r(k)*hbm.lin.Ac{1} + 2*w0(k)*r(k)*hbm.lin.Am{1});
-    dBdw  = dBdw  + (r(k)*hbm.lin.Bc{1} + 2*w0(k)*r(k)*hbm.lin.Bm{1});
+    dA0dw = dA0dw + r(k)*(hbm.lin.Ac{k} + 2*w0(k)*hbm.lin.Am{k});
+    dBdw  = dBdw  + r(k)*(hbm.lin.Bc{k} + 2*w0(k)*hbm.lin.Bm{k});
 end
 [A,R,dAdw,dRdw] = hbm_reduce(hbm,problem,A,dA0dw);
 switch command
@@ -66,11 +66,11 @@ switch command
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
-                    [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
-                    Dxdot = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x;
-                    Dxddot = 2*r(1)*w0(1)*Jxddot{1}*x + 2*r(2)*w0(2)*Jxddot{2}*x + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3}*x;
-                    Dudot = (r(1)*Judot{1} + r(2)*Judot{2})*u;
-                    Duddot = (2*r(1)*w0(1)*Juddot{1}*u + 2*r(2)*w0(2)*Juddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Juddot{3})*u;
+                    [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                    Dxdot  = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x;
+                    Dxddot = (2*r(1)*w0(1)*Jxddot{1} + 2*r(2)*w0(2)*Jxddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3})*x;
+                    Dudot  = (r(1)*Judot{1} + r(2)*Judot{2})*u;
+                    Duddot = (2*r(1)*w0(1)*Juddot{1} + 2*r(2)*w0(2)*Juddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Juddot{3})*u;
                     Dw = r(1)*Dw{1} + r(2)*Dw{2};
                     Dnl1 = Dxdot + Dxddot + Dudot + Duddot + Dw;
                 else
