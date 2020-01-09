@@ -35,13 +35,11 @@ init.X = X0;
 init.w = w;
 init.A = A;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.xscale = packdof(xscale,hbm.harm.iRetain);
-    problem.Fscale = problem.xscale*0+1;
+if isfield(problem,'xscale')
+   xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
+    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
     problem.wscale = w;
+    problem.Fscale = problem.xscale*0+1;
     problem.Zscale = [problem.xscale; problem.wscale];
 else
     problem = hbm_scaling(problem,hbm,init);

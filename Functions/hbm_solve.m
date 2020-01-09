@@ -34,13 +34,11 @@ init.X = X0;
 init.w = w;
 init.A = A;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
-    problem.Fscale = problem.xscale*0+1;
-    problem.Jscale = (1./problem.Fscale(:))*problem.xscale(:)';
+if isfield(problem,'xscale')
+    xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];
+    problem.Zscale = packdof(xscale,hbm.harm.iRetain);
+    problem.Fscale = problem.Zscale*0+1;
+    problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 else
     problem = hbm_scaling(problem,hbm,init);
 end
@@ -53,7 +51,7 @@ constr_tol = 1E-6;
 maxit = 20;
 
 z0 = x0(hbm.harm.iNL);
-Z0 = z0./problem.xscale;
+Z0 = z0./problem.Zscale;
 
 attempts = 0;
 while ~bSuccess && attempts < hbm.max_iter
@@ -77,6 +75,7 @@ while ~bSuccess && attempts < hbm.max_iter
     Z0 = Z + 1E-8*rand(NRetainNL,1);
     attempts = attempts + 1;
 end
+
 if ~bSuccess
     Z = Z + NaN;
 end
@@ -98,7 +97,7 @@ sol.it = iter;
 
 function [c,J] = hbm_constraints(Z,hbm,problem,w,u)
 %unpack the inputs
-x = Z.*problem.xscale;
+x = Z.*problem.Zscale;
 c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 if nargout > 1
@@ -106,6 +105,6 @@ if nargout > 1
 end
 
 function J = hbm_jacobian(Z,hbm,problem,w,u)
-x = Z.*problem.xscale;
+x = Z.*problem.Zscale;
 J = hbm_balance3d('jacob',hbm,problem,w,u,x);
 J = J .* problem.Jscale;

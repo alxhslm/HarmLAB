@@ -39,13 +39,12 @@ zEnd = [xEnd;wEnd];
 
 hbm.bIncludeNL = 1;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
+if isfield(problem,'xscale')
+    xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
     problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
     problem.Fscale = problem.xscale*0+1;
+    
     problem.Zscale = [problem.xscale; problem.wscale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
     bUpdateScaling = 0;
