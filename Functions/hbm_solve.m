@@ -84,7 +84,11 @@ z = Z.*problem.Zscale;
 x = hbm_recover3d(hbm,problem,w,u,z);
 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
 
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
+
 sol.w = w;
+sol.W = W;
 sol.A = A;
 sol.X = X;
 sol.U = U;

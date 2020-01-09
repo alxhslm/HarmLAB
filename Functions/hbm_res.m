@@ -90,18 +90,24 @@ if ~bSuccess
 end
 z = Z.*problem.Zscale;
 
-w = abs(z(end));
+w = z(end);
 w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
-x = z(1:end-1);
+W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
+
+U = A*feval(problem.excite,hbm,problem,w0);
+u = packdof(U);
+
+x = hbm_recover3d(hbm,problem,w,u,z(1:end-1));
+X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
 
 sol.w = w;
+sol.W = W;
 sol.A = A;
-sol.X = unpackdof(x,hbm.harm.NFreq-1,NDof,hbm.harm.iRetain);
-sol.U = A*feval(problem.excite,hbm,problem,w0);
+sol.X = X;
+sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 %floquet multipliers & objective
-u = packdof(sol.U);
 sol.H = hbm_objective('complex',hbm,problem,w,x,u);
 sol.L = hbm_floquet(hbm,problem,w,u,x);
 
