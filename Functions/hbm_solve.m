@@ -7,6 +7,7 @@ end
 if isvector(X0) 
     if length(X0) == hbm.harm.NComp*problem.NDof
         x0 = X0;
+        X0 = unpackdof(x0,hbm.harm.NHarm,problem.NDof);
     else
         error('Wrong size for X0');
     end

@@ -234,9 +234,9 @@ for i = 1:length(wlin)
     C  = problem.C + C_nl;
     K  = problem.K + K_nl;
 
-    Mu = problem.Mu + Mu_nl;
-    Cu = problem.Cu + Cu_nl;
-    Ku = problem.Ku + Ku_nl;
+    Mu = problem.Mu - Mu_nl;
+    Cu = problem.Cu - Cu_nl;
+    Ku = problem.Ku - Ku_nl;
     
     U = A*feval(problem.excite,hbm,problem,w0);
     

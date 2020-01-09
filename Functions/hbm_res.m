@@ -7,6 +7,7 @@ end
 if isvector(X0) 
     if length(X0) == hbm.harm.NComp*problem.NDof
         x0 = X0;
+        X0 = unpackdof(x0,hbm.harm.NHarm,problem.NDof);
     else
         error('Wrong size for X0');
     end
@@ -26,7 +27,7 @@ hbm.bIncludeNL = 1;
 NComp = hbm.harm.NComp;
 
 %first solve @ w0
-sol = hbm_solve(hbm,problem,w,A,x0);
+sol = hbm_solve(hbm,problem,w,A,X0);
 X0 = sol.X;
 x0 = packdof(X0);
 

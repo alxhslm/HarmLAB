@@ -328,7 +328,7 @@ for o = 1:length(command)
                     switch hbm.options.jacob_method
                         case 'mat'
                             for n = 1:3
-                                Juddot{n} = sum(hbm.nonlin.hbm.Jxddot{n}.*States.df_duddot(ijacobx,ijacobu,:),3);
+                                Juddot{n} = sum(hbm.nonlin.hbm.Juddot{n}.*States.df_duddot(ijacobx,ijacobu,:),3);
                             end
                         case 'sum'
                             theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
