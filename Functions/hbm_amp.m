@@ -555,11 +555,12 @@ t = t./norm(t);
 
 function curr = hbm_amp_results(Z,tangent,pred,corr,hbm,problem)
 A = Z(end).*problem.Ascale;
-x = Z(1:end-1).*problem.Xscale;
+xnl = Z(1:end-1).*problem.Xscale;
+Xnl = unpackdof(xnl,hbm.harm.NHarm,problem.NNL,hbm.harm.iRetainNL);
 w = problem.w0;
 t = normalise(tangent.*problem.Zscale);
 
-curr.z = [x; A];
+curr.z = [xnl; A];
 curr.t = t;
 
 curr.sCorr = corr.step;
@@ -570,7 +571,7 @@ curr.flag = '';
 w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 curr.w = w;
-curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+curr.X = hbm_recover3d(hbm,problem,curr.w,curr.U,Xnl);
 curr.U = A*feval(problem.excite,hbm,problem,w0);
 curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;
