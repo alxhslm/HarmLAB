@@ -1,9 +1,22 @@
-function hbm_frf_test
+function hbm_frf_test(b3d)
 problem = test_params;
 
+hbm.harm.rFreqRatio = 1;
+hbm.harm.NHarm = 2;
 hbm.harm.Nfft = 32;
+hbm.harm.iHarmPlot = 2;
 
-hbm.options.bUseStandardHBM = true;
+if nargin < 1
+    b3d = 1;
+end
+
+if b3d
+    hbm.harm.rFreqRatio(end+1) = 1.376;
+    hbm.harm.NHarm(end+1) = 2;
+    hbm.harm.Nfft(end+1) = 16;
+    hbm.harm.iHarmPlot(end+1) = 3;
+end
+
 hbm.dependence.x = true;
 hbm.dependence.xdot  = true;
 hbm.dependence.w = false;
@@ -15,90 +28,78 @@ hbm.cont.max_step = 1E-1;
 hbm.cont.min_step = 1E-6;
 
 hbm.cont.method = 'predcorr';
-hbm.options.aft_method = 'mat';
-hbm.options.jacob_method = 'mat';
-
-% hbm.harm.NHarm = 4;
-hbm.harm.group{1}.kHarm = [0; 1];
-hbm.harm.group{2}.kHarm = [0; 1; 2; 3];
-% 
-problem.iGroup = [1 2]';
 
 [hbm,problem] = setuphbm(hbm,problem);
-NDof = problem.NDof;
 
 omega = sqrt(eig(problem.K,problem.M));
 w0 = max(min(omega)-2,0.5);
 wEnd = max(omega)+2;
-A = 10;
+A = 1;
+
+S = {};
 
 tic;
 hbm.cont.method = 'none';
-hbm.cont.step = 1E-5;
-sol1 = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
-X1 = cat(3,sol1.X);
-X1 = permute(X1(2,:,:),[2 3 1]);
-w1 = cat(2,sol1.w);
-% L = cat(2,sol1.L);
-iStable = 0*w1+1;%all(real(L)<0,1);
-Xs = X1; Xs(:,~iStable) = NaN;
-Xus = X1; Xus(:,iStable) = NaN;
-t(1) = toc;
-figure
-hold on
-col = lines(2);
-for i = 1:2
-    plot(w1,abs(Xs(i,:)),'-','color',col(i,:));
-    plot(w1,abs(Xus(i,:)),'--','color',col(i,:));
-end
-leg{1} = 'none';
+sol = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
+S{end+1} = storeResults(sol,toc,'none');
 
 tic;
 hbm.cont.method = 'predcorr';
 hbm.cont.predcorr.corrector = 'arclength';
-sol2 = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
-X2 = cat(3,sol2.X);
-X2 = permute(X2(2,:,:),[2 3 1]);
-w2 = cat(2,sol2.w);
-t(2) = toc;
-leg{end+1} = 'arclength';
+sol = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
+S{end+1} = storeResults(sol,toc,'arclength');
 
 tic;
-hbm.cont.method = 'coco';
-sol3 = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
-X3 = cat(3,sol3.X);
-X3 = permute(X3(2,:,:),[2 3 1]);
-w3 = cat(2,sol3.w);
-t(3) = toc;
-leg{end+1} = 'coco';
+hbm.cont.method = 'predcorr';
+hbm.cont.predcorr.corrector = 'pseudo';
+sol = hbm_frf(hbm,problem,A,w0,[],wEnd,[]);
+S{end+1} = storeResults(sol,toc,'pseudo');
+
+tic;
+S{end+1} = ode_frf(w0,wEnd,A,hbm,problem);
 
 figure
-ax(1) = subplot(2,1,1);
-h = plot(w1,abs(X1),'r',w2,abs(X2),'g',w3,abs(X3),'b');
 hold on
-ylabel('|F| (mag)');
+for j = 1:problem.NDof
+    ax_mag(j) = subplot(2,problem.NDof,j);
+    hold on
+    for i = 1:length(S)
+        hmag(i,j) = plot(ax_mag(j),S{i}.w,abs(S{i}.X(j,:)));
+    end
+    ylabel(ax_mag(j),sprintf('|X_%d| (mag)',j));
+end
 
-ax(2) = subplot(2,1,2);
-plot(w1,unwrap(angle(X1),[],2),'r',w2,unwrap(angle(X2),[],2),'g',w3,unwrap(angle(X3),[],2),'b');
-hold on
-xlabel('\omega (rads)');
-ylabel('\angle F (deg)');
-linkaxes(ax,'x')
-drawnow
-legend(h(1:2:end),'pseudo','arclength','coco')
+for j = 1:problem.NDof
+    ax_ph(j) = subplot(2,problem.NDof,problem.NDof+j);
+    hold on
+    for i = 1:length(S)
+        hph(i,j) = plot(ax_ph(j),S{i}.w,unwrap(angle(S{i}.X(j,:)),[],2));
+    end
+    xlabel(ax_ph(j),'\omega (rads)');
+    ylabel(ax_ph(j),sprintf('\\angle X_%d (deg)',j));
+end
+linkaxes([ax_mag ax_ph],'x')
 
-return
+for i = 1:length(S)
+    leg{i} = S{i}.name;
+end
+legend(ax_ph(end),hph(:,end),leg)
 
-tic;
-y = zeros(1,2*NDof);
-sol3.w = [linspace(w0,wEnd,20)];% linspace(wEnd,w0,50)];
+for i = 1:length(S)
+    fprintf('%10s : %0.2f s\n',S{i}.name,S{i}.t)
+end
+
+function S = ode_frf(w0,wEnd,A,hbm,problem)
+y = zeros(1,2*problem.NDof);
+ws = linspace(w0,wEnd,20);
 NCycle = 50;
 Nfft = 101;
-for i = 1:length(sol3.w)
+for i = 1:length(ws)
     y0 = y(end,:);
-    U = A*test_model('excite',[],[],[],[],[],[],hbm,problem,sol3.w(i));
-    T = 2*pi/sol3.w(i);
-    [t,y] = ode45(@(t,y)test_odefun(t,y,sol3.w(i),U,problem),[0 NCycle*T],y0);
+    w0 = hbm.harm.rFreqRatio * ws(i);
+    U = A*test_excite(hbm,problem,w0);
+    T = 2*pi/ws(i);
+    [t,y] = ode45(@(t,y)test_odefun(t,y,w0,U,hbm,problem),[0 NCycle*T],y0);
     
     ii = find(t>(t(end)-T),1);
     t = t(ii:end) - t(ii);
@@ -111,10 +112,19 @@ for i = 1:length(sol3.w)
     Yfft = 2*fft(yReg,[],1)/Nfft;
     Wfft = (0:(Nfft-1))'/Nfft * 2*pi* Fs;
         
-    Xode(i,:) = Yfft(2,1:NDof);
-    wode(i) = Wfft(2);
+    X(:,i) = Yfft(2,1:problem.NDof);
+    w(i) = Wfft(2);
 end
-toc;
 
-plot(ax(1),wode,abs(Xode));
-plot(ax(2),wode,unwrap(angle(Xode),[],2));
+S.X = X;
+S.w = w;
+S.t = toc;
+S.name = 'ode';
+
+function S = storeResults(sol,t,name)
+X = cat(3,sol.X);
+
+S.X = permute(X(2,:,:),[2 3 1]);
+S.w = cat(2,sol.w);
+S.t = t;
+S.name = name;

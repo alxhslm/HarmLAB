@@ -1,10 +1,6 @@
 function Mydot = test_odefun(t,y,w0,U,hbm,problem)
 NInput = size(U,2);
-if length(w0)>1
-    w = hbm.harm.kHarm(:,1)*w0(1) + hbm.harm.kHarm(:,2)*w0(2);
-else
-    w = (0:hbm.harm.NHarm)'*w0;
-end
+w = hbm.harm.kHarm*w0(:);
 Wu = repmat(1i*w,1,NInput);
 
 ph = repmat(permute(exp(1i*w*t), [3 2 1]),NInput,1);
