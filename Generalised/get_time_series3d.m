@@ -17,30 +17,15 @@ t2 = (0:Nfft(2)-1)/Nfft(2)*2*pi/w0(2);
 %compute the fourier coefficients of the derivatives
 Wx = repmat(1i*w,1,size(X,2));
 
-switch hbm.options.aft_method
-    case 'fft'
-        %create the time series from the fourier series
-        x = freq2time3d(X,NHarm,hbm.harm.iSub,Nfft);
-        if nargout > 2
-            Xdot  = X.*Wx;
-            xdot  = freq2time3d(Xdot,NHarm,hbm.harm.iSub,Nfft);
-            if nargout > 3
-                Xddot = Xdot.*Wx;
-                xddot = freq2time3d(Xddot,NHarm,hbm.harm.iSub,Nfft);
-            end
-        end
-        
-    case 'mat'
-        %create the time series from the fourier series
-        x = real(hbm.nonlin.IFFT*X);
-        if nargout > 2
-            Xdot  = X.*Wx;
-            xdot  = real(hbm.nonlin.IFFT*Xdot);
-            if nargout > 3
-                Xddot  = Xdot.*Wx;
-                xddot = real(hbm.nonlin.IFFT*Xddot);
-            end
-        end
+%create the time series from the fourier series
+x = real(hbm.nonlin.IFFT*X);
+if nargout > 2
+    Xdot  = X.*Wx;
+    xdot  = real(hbm.nonlin.IFFT*Xdot);
+    if nargout > 3
+        Xddot  = Xdot.*Wx;
+        xddot = real(hbm.nonlin.IFFT*Xddot);
+    end
 end
 
 x = reshape(x,size(t1,1),size(t1,2),[]);

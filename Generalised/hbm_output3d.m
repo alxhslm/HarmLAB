@@ -25,14 +25,7 @@ States = hbm_states3d(w0,X,U,hbm);
 o = feval(problem.model,'output',States,hbm,problem);
 
 %finally convert into a fourier series
-switch hbm.options.aft_method
-    case 'fft'
-        %put back into hypertime
-        O = time2freq3d(o.',NHarm,iSub,Nfft);
-    case 'mat'
-        %finally convert into a fourier series
-        O = hbm.nonlin.FFT*o.';
-end
+O = hbm.nonlin.FFT*o.';
 
 if isvector(x)
     o = packdof(O);

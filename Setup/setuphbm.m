@@ -67,7 +67,6 @@ function options = setupOptions(options)
 if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
 if ~isfield(options,'bUseStandardHBM'), options.bUseStandardHBM = 0; end
 if ~isfield(options,'solver'), options.solver = 'ipopt'; end
-options = default_missing(options,{'aft_method','jacob_method'},{'mat','mat'});
 
 function dependence = setupDependence(dependence)
 dependence = default_missing(dependence,{'x','xdot','xddot','w','u','udot','uddot'},{true,false,false,false,false,false,false});

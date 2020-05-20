@@ -9,30 +9,15 @@ t = (0:Nfft-1)'/Nfft*2*pi/w0;
 %compute the fourier coefficients of the derivatives
 Wx = repmat(1i*w,1,size(X,2));
 
-switch hbm.options.aft_method
-    case 'fft'
-        %create the time series from the fourier series
-        x = freq2time(X,NHarm,Nfft);
-        if nargout > 2
-            Xdot  = X.*Wx;
-            xdot  = freq2time(Xdot,NHarm,Nfft);
-            if nargout > 3
-                Xddot = Xdot.*Wx;
-                xddot = freq2time(Xddot,NHarm,Nfft);
-            end
-        end
-        
-    case 'mat'
-        %create the time series from the fourier series
-        x  = real(hbm.nonlin.IFFT*X);
-        if nargout > 2
-            Xdot  = X.*Wx;
-            xdot  = real(hbm.nonlin.IFFT*Xdot);
-            if nargout > 3
-                Xddot  = Xdot.*Wx;
-                xddot = real(hbm.nonlin.IFFT*Xddot);
-            end
-        end
+%create the time series from the fourier series
+x  = real(hbm.nonlin.IFFT*X);
+if nargout > 2
+    Xdot  = X.*Wx;
+    xdot  = real(hbm.nonlin.IFFT*Xdot);
+    if nargout > 3
+        Xddot  = Xdot.*Wx;
+        xddot = real(hbm.nonlin.IFFT*Xddot);
+    end
 end
 
 if nargin < 5 || isempty(tspan) %empty
