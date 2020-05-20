@@ -81,10 +81,6 @@ cont = default_missing(cont,{'method','bUpdate','step0','min_step','max_step','f
 if ~isfield(cont,'predcorr'), cont.predcorr = struct(); end
 cont.predcorr = default_missing(cont.predcorr,{'predictor','corrector','bMoorePenrose','solver','maxit'},{'linear','pseudo',true,'ipopt',30});
 
-if ~isfield(cont,'coco'), cont.coco = struct(); end
-cont.coco = default_missing(cont.coco,{'ItMX','NPR'},{2E4,5});
-
-
 function problem = setupProblem(problem,hbm)
 if ~isfield(problem,'name')
     problem.name = '';

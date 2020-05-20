@@ -391,48 +391,6 @@ switch hbm.cont.method
         results(end+1) = curr(end);
 
         hbm_frf_plot('close',hbm,problem,[]);
-    case 'coco'
-        rng('shuffle')
-        currdir = pwd;
-        cd(desktoproot);
-        name = ['temp' num2str(round(rand(1)*1E12))];
-        while exist(['data' filesep name],'dir')
-            name = ['temp' num2str(round(rand(1)*1E12))];
-        end
-        data.hbm = hbm;
-        data.problem = problem;
-        data.A = A;
-        
-        prob = coco_prob();
-        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', z0./problem.Zscale);
-        prob = coco_add_pars(prob, 'pars', length(z0), 'w');
-        prob = coco_add_slot(prob, 'plot', @hbm_coco_callback, data, 'bddat');
-        
-        prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
-        prob = coco_set(prob,'ep','bifus',false);
-        bd = coco(prob, name, [], 1, 'w', [wMin wMax]./problem.wscale);
-        hbm_frf_plot('close',hbm,problem,[]);
-        
-        %extract the solutions
-        lab_col = coco_bd_col(bd, 'TYPE');
-        NPts = sum(cellfun(@(x)~isempty(x),lab_col));
-        pred.step = 0;
-        corr.step = 0;
-        corr.it = 0;
-        for i = 1:NPts
-            chart = coco_read_solution(name,i,'chart');
-            pred.step = chart.R;
-            corr.step = chart.R;
-            Z = chart.x(1:end-1);
-            T = chart.t(1:end-1);
-            results(i) = hbm_frf_results(Z,T,pred,corr,hbm,problem);
-        end
-        fclose all;
-        try
-            rmdir(['data' filesep name],'s')
-        end
-        cd(currdir);
-        prog.Status = 'success';
 end
 
 NPts = length(results);
@@ -526,35 +484,6 @@ function J = hbm_arclength_jacobian(Z,hbm,problem,corr)
 J = hbm_frf_jacobian(Z,hbm,problem);
 sgn = sign((Z - corr.Zprev)' * corr.Tprev);
 J(end+1,:) = sgn*((Z - corr.Zprev)'+eps)/(1*(norm(Z - corr.Zprev)+eps));
-
-%% Coco functions
-function [data, res] = hbm_coco_callback(prob, data, command, varargin)
-hbm = data.hbm;
-problem = data.problem;
-
-switch command
-    case 'init'
-        x = prob.efunc.x0(1:end-1).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
-        init.w = prob.efunc.x0(end).*problem.wscale;
-        init.A = data.A;
-        hbm_frf_plot('init',hbm,problem,init);
-    case 'data'
-        chart = varargin{1};
-        x = chart.x(1:end-2).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof);
-        curr.w = chart.x(end).*problem.wscale;
-        curr.A = data.A;
-        hbm_frf_plot('data',hbm,problem,curr);
-end
-
-res = {};
-
-function [data,c] = hbm_coco_constraints(prob, data, u)
-c = hbm_frf_constraints(u,data.hbm,data.problem);
-
-function [data, J] = hbm_coco_jacobian(prob, data, u)
-J = hbm_frf_jacobian(u,data.hbm,data.problem);
 
 %% Utilities
 function y = norm2(x)

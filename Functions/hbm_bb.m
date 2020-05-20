@@ -378,47 +378,6 @@ switch hbm.cont.method
         results(end+1) = curr(end);
 
         hbm_bb_plot('close',hbm,problem,[]);
-    case 'coco'
-        rng('shuffle')
-        currdir = pwd;
-        cd(desktoproot);
-        name = ['temp' num2str(round(rand(1)*1E12))];
-        while exist(['data' filesep name],'dir')
-            name = ['temp' num2str(round(rand(1)*1E12))];
-        end
-        data.hbm = hbm;
-        data.problem = problem;
-                
-        prob = coco_prob();
-        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', z0./problem.Zscale);
-        prob = coco_add_pars(prob, 'pars', length(z0), 'A');
-        prob = coco_add_slot(prob, 'plot', @hbm_coco_callback, data, 'bddat');
-        
-        prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
-        prob = coco_set(prob,'ep','bifus',false);
-        bd = coco(prob, name, [], 1, 'A', [AMin AMax]./problem.Ascale);
-        hbm_bb_plot('close',hbm,problem,[]);
-        
-        %extract the solutions
-        lab_col = coco_bd_col(bd, 'TYPE');
-        NPts = sum(cellfun(@(x)~isempty(x),lab_col));
-        pred.step = 0;
-        corr.step = 0;
-        corr.it = 0;
-        for i = 1:NPts
-            chart = coco_read_solution(name,i,'chart');
-            pred.step = chart.R;
-            corr.step = chart.R;
-            Z = chart.x(1:end-1);
-            T = chart.t(1:end-1);
-            results(i) = hbm_bb_results(Z,T,pred,corr,hbm,problem);
-        end
-        fclose all;
-        try
-            rmdir(['data' filesep name],'s')
-        end
-        cd(currdir);
-        prog.Status = 'success';
 end
 
 NPts = length(results);
@@ -522,36 +481,6 @@ J = hbm_bb_jacobian(Z,hbm,problem);
 sgn = sign((Z - corr.Zprev)' * corr.Tprev);
 J(end+1,:) = sgn*((Z - corr.Zprev)'+eps)/(1*(norm(Z - corr.Zprev)+eps));
 
-%% Coco functions
-function [data res] = hbm_coco_callback(prob, data, command, varargin)
-hbm = data.hbm;
-problem = data.problem;
-
-switch command
-    case 'init'
-        x = prob.efunc.x0(1:end-2).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
-        init.A = prob.efunc.x0(end).*problem.Ascale;
-        init.w = prob.efunc.x0(end-1).*problem.wscale;
-        init = hbm_coco_objective(hbm,problem,init);
-        hbm_bb_plot('init',hbm,problem,init);
-    case 'data'
-        chart = varargin{1};
-        x = chart.x(1:end-3).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof);
-        curr.A = chart.x(end-1).*problem.Ascale;
-        curr.w = chart.x(end-2).*problem.wscale;
-        curr = hbm_coco_objective(hbm,problem,curr);
-        hbm_bb_plot('data',hbm,problem,curr);
-end
-res = {};
-
-function [data,c] = hbm_coco_constraints(prob, data, u)
-c = hbm_bb_constraints(u,data.hbm,data.problem);
-
-function [data, J] = hbm_coco_jacobian(prob, data, u)
-J = hbm_bb_jacobian(u,data.hbm,data.problem);
-
 %% Utilities
 function y = norm2(x)
 y = sqrt(sum(x.^2,1));
@@ -590,12 +519,6 @@ curr.A = A;
 u = packdof(curr.U);
 curr.H = hbm_objective('complex',hbm,problem,w*hbm.harm.rFreqRatio,x,u);
 
-function curr = hbm_coco_objective(hbm,problem,curr)
-curr.U = curr.A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
-x = packdof(curr.X);
-u = packdof(curr.U);
-w = curr.w;
-curr.H = hbm_objective('complex',hbm,problem,w*hbm.harm.rFreqRatio,x,u);
 
 function [r,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A)
 U = A*feval(problem.excite,hbm,problem,w0);
