@@ -17,16 +17,10 @@ lambda = eig(A,B,'vector');
 [~,iSort] = sort(abs(imag(lambda)));
 lambda = lambda(iSort);
 
-% %remove real eigenvalues
-% iKeep = abs(imag(lambda)) > 1E-6;
-% lambda = lambda(iKeep);
-
-% lambda = lambda((1:2*problem.NDof),:);
 
 function [A,B] = floquetMatrices(hbm,problem,w,u,x)
 hbm.bIncludeNL = 1;
 NPts = size(u,2);
-% h = waitbar(0,'Computing matrices');
 
 A = zeros(2*size(x,1),2*size(x,1),NPts);
 B = zeros(2*size(x,1),2*size(x,1),NPts);
@@ -47,7 +41,4 @@ for i = 1:NPts
       
     A(:,:,i) = B1;
     B(:,:,i) = -B2;
-    
-%     waitbar(i/NPts,h)
 end
-% close(h)

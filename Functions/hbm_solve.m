@@ -20,15 +20,14 @@ else
 end
 
 %setup the problem for IPOPT
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
+
 %we have an initial guess vector
-w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 U = A*feval(problem.excite,hbm,problem,w0);
-
-hbm.bIncludeNL = true;
-
 u = packdof(U);
 
-NRetainNL  = hbm.harm.NRetainNL;
+hbm.bIncludeNL = true;
 
 init.X = X0;
 init.w = w;
@@ -72,7 +71,7 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
     end
-    Z0 = Z + 1E-8*rand(NRetainNL,1);
+    Z0 = Z + 1E-8*rand(length(Z),1);
     attempts = attempts + 1;
 end
 
@@ -83,9 +82,6 @@ z = Z.*problem.Zscale;
 
 x = hbm_recover3d(hbm,problem,w,u,z);
 X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
-
-w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
-W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
 
 sol.w = w;
 sol.W = W;

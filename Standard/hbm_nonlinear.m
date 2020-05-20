@@ -110,7 +110,7 @@ for o = 1:length(command)
             varargout{o} = Jx;
         case 'jacobU' %df_dU = Ju*U
             if ~hbm.dependence.u
-                Ju = zeros(NDofTot,NInputTot);
+                Ju = zeros(NRetain,NInputTot);
             else
                 States.df_du = hbm_derivatives('nl' ,'u',States,hbm,problem);
                 
@@ -291,7 +291,6 @@ for o = 1:length(command)
                 end
             end
             varargout{o} = Juddot;
-            
        case 'floquet1xdot'
            if ~hbm.dependence.xdot
                 D1 = zeros(NRetain,NRetainNL);
@@ -366,8 +365,7 @@ for o = 1:length(command)
                     end
                 end
             end
-            varargout{o} = D1dd;
-            
+            varargout{o} = D1dd; 
        case 'floquet2'
            if ~hbm.dependence.xddot
                 D2 = zeros(NRetain,NRetainNL);

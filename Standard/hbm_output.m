@@ -27,10 +27,17 @@ end
 States = hbm_states(w0,X,U,hbm);
 
 %push through the nl system
-o = feval(problem.model,'output',States,hbm,problem).';
+o = feval(problem.model,'output',States,hbm,problem);
 
 %finally convert into a fourier series
-O = time2freq(o,NFreq-1,Nfft);
+switch hbm.options.aft_method
+    case 'fft'
+        %put back into hypertime
+        O = time2freq(o.',NHarm,NFreq-1,Nfft);
+    case 'mat'
+        %finally convert into a fourier series
+        O = hbm.nonlin.FFT*o.';
+end
 
 if ndims(x) < 2
     o = packdof(O);

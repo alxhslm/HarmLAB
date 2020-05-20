@@ -19,17 +19,13 @@ else
     end
 end
 
-NDof = problem.NDof;
-
 %setup the problem for IPOPT
-
-hbm.bIncludeNL = 1;
-NComp = hbm.harm.NComp;
+hbm.bIncludeNL = true;
 
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w,A,X0);
 X0 = sol.X;
-x0 = packdof(X0);
+z0 = packdof(X0);
 
 init.X = X0;
 init.w = w;
@@ -41,23 +37,20 @@ if isfield(problem,'xscale')
     problem.wscale = w;
     problem.Fscale = problem.xscale*0+1;
     problem.Zscale = [problem.xscale; problem.wscale];
+    problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 else
     problem = hbm_scaling(problem,hbm,init);
 end
 
-problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
-
-z0 = [x0; w];
-Z0 = z0./problem.Zscale;
-
 %and actually solve it
 hbm.max_iter = 4;
 bSuccess = false;
-Jstr = [hbm.sparsity ones(NDof*NComp,1)];
 
 constr_tol = 1E-6;
 opt_tol = 1E-6;
 maxit = 20;
+
+Z0 = [z0; w]./problem.Zscale;
 
 attempts = 0;
 while ~bSuccess && attempts < hbm.max_iter
@@ -71,7 +64,7 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = EXITFLAG == 1;
             iter = OUTPUT.iterations + 1;
         case 'ipopt'
-            options.jacobianstructure  = Jstr;
+            options.jacobianstructure  = [hbm.sparsity ones(problem.NNL*hbm.harm.NComp,1)];
             options.jacobian = @hbm_jacobian;
             options.gradient = @hbm_grad;
             options.print_level = 5;
@@ -108,7 +101,7 @@ sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 %floquet multipliers & objective
-sol.H = hbm_objective('complex',hbm,problem,w,x,u);
+sol.H = hbm_objective('complex',hbm,problem,w,z(1:end-1),u);
 sol.L = hbm_floquet(hbm,problem,w,u,x);
 
 sol.it = iter;
@@ -181,4 +174,3 @@ if nargout > 2
 %     Jc = Jceq(end,:)';
 %     Jceq = Jceq(1:end-1,:)';
 end
-

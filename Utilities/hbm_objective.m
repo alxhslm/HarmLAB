@@ -52,9 +52,9 @@ switch problem.res.input
     case 'unity'
         Fex = 0*u+1;
     case 'fe'
-        Ju = prod(w0)*hbm.lin.Bx;
+        Ju = prod(w0)*hbm.lin.Bx + hbm.lin.Bk;
         for k = 1:2
-            Ju = Ju + (hbm.lin.Bk{k} + w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
+            Ju = Ju + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
         end
         Fex = Ju*u -  hbm.lin.b;
     case 'u'
@@ -150,7 +150,7 @@ for i = 1:length(part)
                 case 'fe'
                     Dw_u = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Bx*u;
                     for k = 1:2
-                        Dw_u = Dw_u + r(k)*(hbm.lin.Bc{k}* + 2*w0(k)*hbm.lin.Bm{k})*u;
+                        Dw_u = Dw_u + r(k)*(hbm.lin.Bc{k} + 2*w0(k)*hbm.lin.Bm{k})*u;
                     end
                 case 'u'
                     Dw_u = zeros(problem.NInput*hbm.harm.NComp,1);

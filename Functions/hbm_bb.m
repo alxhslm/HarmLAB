@@ -28,7 +28,7 @@ if isfield(problem,'xscale')
     problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
     problem.Ascale = mean([A0 AEnd]);
-    problem.Fscale = problem.xscale*0+1;
+    problem.Fscale = [problem.xscale*0+1;1];
     problem.Zscale = [problem.xscale; problem.wscale; problem.Ascale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
     bUpdateScaling = 0;
@@ -83,7 +83,7 @@ switch hbm.cont.method
             
             iPredict = max(length(Asol)-6,1):length(Asol);
             if length(iPredict) > 1
-                xpred = interp1(Asol(iPredict),zsol(:,iPredict)',Apred,'pchip','extrap')';
+                zpred = interp1(Asol(iPredict),zsol(:,iPredict)',Apred,'pchip','extrap')';
             else
                 zpred = zsol(:,end);
                 zpred(end) = Apred;

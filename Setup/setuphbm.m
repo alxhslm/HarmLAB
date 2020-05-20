@@ -66,7 +66,6 @@ elseif size(problem.RDofPlot,2) ~= problem.NDof
     error('Wrong size for RDofPlot')
 end
   
-
 function options = setupOptions(options)
 if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
 if ~isfield(options,'bUseStandardHBM'), options.bUseStandardHBM = 0; end
@@ -78,7 +77,6 @@ dependence = default_missing(dependence,{'x','xdot','xddot','w','u','udot','uddo
 
 function scaling = setupScaling(scaling)
 scaling = default_missing(scaling,{'method','tol'},{'max',1E-6});
-
 
 function cont = setupCont(cont)
 cont = default_missing(cont,{'method','bUpdate','step0','min_step','max_step','ftol','xtol','c', 'C','maxfail','num_iter_increase','num_iter_reduce'},{'predcorr',true,1E-3, 1E-6, 5E-3, 1E-6,1E-6,0.5, 1.05,4,10,3});
@@ -167,7 +165,7 @@ if isfield(problem,'res')
         
         R = zeros(length(problem.res.iInput),problem.res.NInput);
         for j = 1:length(problem.res.iInput)
-            R(j,problem.iInput(j)) = 1;
+            R(j,problem.res.iInput(j)) = 1;
         end
         
         problem.res.RInput = R;
@@ -189,7 +187,7 @@ if isfield(problem,'res')
         
         R = zeros(length(problem.res.iOutput),problem.res.NOutput);
         for j = 1:length(problem.res.iOutput)
-            R(j,problem.iOutput(j)) = 1;
+            R(j,problem.res.iOutput(j)) = 1;
         end
         
         problem.res.ROutput = R;

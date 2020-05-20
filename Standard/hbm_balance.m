@@ -57,7 +57,7 @@ switch command
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
-                    [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                    [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
                     Dxdot = r*Jxdot*x;
                     Dxddot = 2*r*w0*Jxddot*x;
                     Dudot = r*Judot*u;
@@ -78,7 +78,6 @@ switch command
                 Dnl = 0*Dl;
             end
         else
-            cnl = 0*x;
             Dnl = 0*Dl;
         end
         D = R*(Dl - Dnl) + dRdw*(cl-cnl);
