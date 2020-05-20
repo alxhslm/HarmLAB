@@ -13,10 +13,10 @@ switch hbm.scaling.method
         xdc = max(abs(X(1,:)),tol);
         xharm = max(abs(X(2:end,:)),tol);
 end
-xscale = [xdc; xharm*(1+1i)];
-problem.xscale = packdof(xscale,hbm.harm.iRetainNL);
-problem.Zscale = problem.xscale;
-problem.Fscale = ones(length(problem.xscale),1);
+Xscale = [xdc; xharm*(1+1i)];
+problem.Xscale = packdof(Xscale,hbm.harm.iRetainNL);
+problem.Zscale = problem.Xscale;
+problem.Fscale = ones(length(problem.Xscale),1);
 
 switch problem.type
     case 'frf'

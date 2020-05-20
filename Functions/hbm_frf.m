@@ -41,11 +41,11 @@ hbm.bIncludeNL = 1;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+    problem.Xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
-    problem.Fscale = problem.xscale*0+1;
+    problem.Fscale = problem.Xscale*0+1;
     
-    problem.Zscale = [problem.xscale; problem.wscale];
+    problem.Zscale = [problem.Xscale; problem.wscale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
     bUpdateScaling = 0;
 else
@@ -71,7 +71,7 @@ switch hbm.cont.method
         pred.step = hbm.cont.step0;
         direction = sign(wEnd-w0)*wscale;
         
-        problem.xscale = 0*problem.xscale + 1;
+        problem.Xscale = 0*problem.Xscale + 1;
         problem.wscale = 1;
         problem.Zscale = 0*problem.Zscale + 1;
         
@@ -483,7 +483,7 @@ end
 %% Constraints and Jacobian
 function c = hbm_frf_constraints(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
@@ -497,7 +497,7 @@ c = c ./ problem.Fscale;
 
 function J = hbm_frf_jacobian(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
@@ -571,7 +571,7 @@ t = t./norm(t);
 
 function curr = hbm_frf_results(Z,tangent,pred,corr,hbm,problem)
 w = Z(end).*problem.wscale;
-xnl = Z(1:end-1).*problem.xscale;
+xnl = Z(1:end-1).*problem.Xscale;
 Xnl = unpackdof(xnl,hbm.harm.NHarm,problem.NNL,hbm.harm.iRetainNL);
 A = problem.A;
 t = normalise(tangent.*problem.Zscale);
