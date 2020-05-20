@@ -35,15 +35,12 @@ hbm.cont = setupCont(hbm.cont);
 
 %% Problem definition
 problem = setupProblem(problem,hbm);
-hbm.harm = setupGroups(problem,hbm.harm);
 
 if ~isfield(problem,'sparsity')
     hbm.sparsity = ones(hbm.harm.NComp*problem.NDof);
 else
     hbm.sparsity = repmat(problem.sparsity(1:problem.NDof,1:problem.NDof),hbm.harm.NComp);
 end
-iRetain = hbm.harm.iRetainNL;
-hbm.sparsity = hbm.sparsity(iRetain,iRetain);
 
 %% Precompute matrices
 hbm.lin    = setupLin(hbm.harm,problem);
@@ -92,18 +89,8 @@ function problem = setupProblem(problem,hbm)
 if ~isfield(problem,'name')
     problem.name = '';
 end
-    problem.NDof = size(problem.K,2);
-    problem.NInput = size(problem.Ku,2);
-
-if ~isfield(problem,'iNL')
-    problem.iNL = (1:problem.NDof)';
-end
-problem.NNL = length(problem.iNL);
-
-tmp = true(problem.NDof,1);
-tmp(problem.iNL) = false;
-problem.iLin = find(tmp);
-problem.NLin = length(problem.iLin);
+problem.NDof = size(problem.K,2);
+problem.NInput = size(problem.Ku,2);
 
 f = {'K','M','C'};
 for i = 1:length(f)
@@ -210,68 +197,6 @@ States.xddot = zeros(problem.NDof,1);
 States.u = zeros(problem.NInput,1);
 States.udot = zeros(problem.NInput,1);
 States.uddot = zeros(problem.NInput,1);
-
-function harm = setupGroups(problem,harm)
-%asign each DOF to a group
-for i = 1:length(harm.group)
-    harm.group{i}.iDof = find(problem.iGroup==i);
-    harm.group{i}.NDof = length(harm.group{i}.iDof);
-    harm.group{i}.NCompTot = harm.group{i}.NDof * harm.group{i}.NComp;
-end
-
-%now we need to work out which indices we need to retain
-NDof = problem.NDof;
-NNL  = problem.NNL;
-bRetain = false(harm.NComp*NDof,1);
-bRetainNL = false(harm.NComp*NNL,1);
-for i = 1:length(harm.group)
-    for k = 1:harm.group{i}.NFreq
-        iDof = harm.group{i}.iDof;
-        iNL = dof2nl(problem.iNL,iDof);
-        if harm.group{i}.iFreq(k) == 1
-            iKeep = iDof;
-            iKeepNL = iNL;
-        else
-            iKeep = NDof + (harm.group{i}.iFreq(k)-2)*2*NDof + [iDof; NDof + iDof];
-            iKeepNL = NNL + (harm.group{i}.iFreq(k)-2)*2*NNL + [iNL; NNL + iNL];
-        end
-        bRetain(iKeep) = true;
-        bRetainNL(iKeepNL) = true;
-    end
-end
-%index into the FULL phasor vector comprising of:
-%  - including ALL DOFs (linear and non-linear)
-%  - at ALL possible harmonics (even ones being neglected for certain DOF)
-harm.iRetain = find(bRetain);
-harm.NRetain = sum(bRetain);
-
-%index into the PARTIAL phasor vector comprising of:
-%  - only the non-linear DOFs
-%  - at ALL possible harmonics (even ones being neglected for certain DOF)
-harm.iRetainNL = find(bRetainNL);
-harm.NRetainNL = sum(bRetainNL);
-
-bLin = false(problem.NDof*harm.NComp,1);
-bNL = false(problem.NDof*harm.NComp,1);
-for j = 1:harm.NFreq
-    if j == 1
-        iLin  = problem.iLin;
-        iNL  = problem.iNL;
-    else
-        iLin = NDof + 2*(j-2)*problem.NDof + [problem.iLin; NDof + problem.iLin];
-        iNL  = NDof + 2*(j-2)*problem.NDof + [problem.iNL; NDof + problem.iNL];
-    end
-    bLin(iLin) = true;
-    bNL(iNL) = true;
-end
-harm.iLin = find(bLin(bRetain));
-harm.iNL = find(bNL(bRetain));
-
-function j = dof2nl(nonlin,ind)
-j = [];
-for i = 1:length(ind)
-    j = [j; find(nonlin == ind(i))];
-end
 
 function s = default_missing(s,f,d)
 for i = 1:length(f)

@@ -4,7 +4,7 @@ problem.w0 = w0;
 
 %first solve @ A0
 sol = hbm_solve(hbm,problem,w0,A0,X0);
-x0 = packdof(sol.X,hbm.harm.iRetain);
+x0 = packdof(sol.X);
 if any(isnan(abs(x0(:))))
     error('Failed to solve initial problem')
 end
@@ -15,7 +15,7 @@ init.w = w0;
 init.A = A0;
 
 sol = hbm_solve(hbm,problem,w0,AEnd,XEnd);
-xEnd = packdof(sol.X,hbm.harm.iRetain);
+xEnd = packdof(sol.X);
 if any(isnan(abs(xEnd(:))))
     error('Failed to solve final problem')
 end
@@ -25,7 +25,7 @@ hbm.bIncludeNL = 1;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.Xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
     problem.Ascale = mean([A0 AEnd]);
     problem.Fscale = problem.Xscale*0+1;
     problem.Zscale = [problem.Xscale; problem.Ascale];
@@ -89,7 +89,7 @@ switch hbm.cont.method
             
             %now try to solve
             xpred = zpred(1:end-1);
-            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
             sol = hbm_solve(hbm,problem,w0,Apred,Xpred);
             sol.x = packdof(sol.X);
             
@@ -520,14 +520,14 @@ problem = data.problem;
 switch command
     case 'init'
         x = prob.efunc.x0(1:end-1).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
         init.A = prob.efunc.x0(end).*problem.Ascale;
         init.w = data.w;
         hbm_amp_plot('init',hbm,problem,init);
     case 'data'
         chart = varargin{1};
         x = chart.x(1:end-2).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof);
         curr.A = chart.x(end).*problem.Ascale;
         curr.w = data.w;
         hbm_amp_plot('data',hbm,problem,curr);
@@ -570,7 +570,7 @@ curr.flag = '';
 w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 curr.w = w;
-curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
 curr.U = A*feval(problem.excite,hbm,problem,w0);
 curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;

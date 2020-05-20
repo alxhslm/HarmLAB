@@ -1,22 +1,14 @@
 function o = hbm_output(hbm,problem,w,u,x)
 NInput = problem.NInput;
 NDof = problem.NDof;
-
 NHarm  = hbm.harm.NHarm;
-NFreq = hbm.harm.NFreq;
-Nfft  = hbm.harm.Nfft;
-
-iRetain = hbm.harm.iRetain;
 
 ii = find(NHarm ~= 0);
-NHarm = NHarm(ii);
-Nfft = Nfft(ii);
-
 r = hbm.harm.rFreqRatio(ii);
 w0 = w * r + hbm.harm.wFreq0(ii);
 
-if isvector(x) && size(x,1) == hbm.harm.NComp*NDof
-    X = unpackdof(x,NFreq-1,NDof,iRetain);
+if isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
+    X = unpackdof(x,NFreq-1,NDof);
     U = unpackdof(u,NFreq-1,NInput);
 else
     X = x;

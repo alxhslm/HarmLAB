@@ -4,7 +4,7 @@ problem.A = A;
 
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w0,A,X0);
-x0 = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+x0 = packdof(sol.X);
 u0 = packdof(sol.U);
 f0 = packdof(sol.F);
 if any(isnan(abs(x0(:))))
@@ -23,7 +23,7 @@ init.w = w0;
 init.A = A;
 
 sol = hbm_solve(hbm,problem,wEnd,A,XEnd);
-xEnd = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+xEnd = packdof(sol.X);
 uEnd = packdof(sol.U);
 fEnd = packdof(sol.F);
 if any(isnan(abs(xEnd(:))))
@@ -41,7 +41,7 @@ hbm.bIncludeNL = 1;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.Xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
     problem.Fscale = problem.Xscale*0+1;
     
@@ -104,9 +104,9 @@ switch hbm.cont.method
            
             %now try to solve
             xpred = zpred(1:end-1);
-            Xpred(:,problem.iNL) = unpackdof(xpred,hbm.harm.NFreq-1,problem.NNL,hbm.harm.iRetainNL);
+            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
             sol = hbm_solve(hbm,problem,wpred,A,Xpred);
-            sol.x = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+            sol.x = packdof(sol.X);
             
             z = [sol.x; sol.w];
             t = z - zprev;
@@ -535,14 +535,14 @@ problem = data.problem;
 switch command
     case 'init'
         x = prob.efunc.x0(1:end-1).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
         init.w = prob.efunc.x0(end).*problem.wscale;
         init.A = data.A;
         hbm_frf_plot('init',hbm,problem,init);
     case 'data'
         chart = varargin{1};
         x = chart.x(1:end-2).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
+        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof);
         curr.w = chart.x(end).*problem.wscale;
         curr.A = data.A;
         hbm_frf_plot('data',hbm,problem,curr);
@@ -571,12 +571,12 @@ t = t./norm(t);
 
 function curr = hbm_frf_results(Z,tangent,pred,corr,hbm,problem)
 w = Z(end).*problem.wscale;
-xnl = Z(1:end-1).*problem.Xscale;
-Xnl = unpackdof(xnl,hbm.harm.NHarm,problem.NNL,hbm.harm.iRetainNL);
+x = Z(1:end-1).*problem.Xscale;
+X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
 A = problem.A;
 t = normalise(tangent.*problem.Zscale);
 
-curr.z = [xnl; w];
+curr.z = [x; w];
 curr.t = t;
 
 curr.sCorr = corr.step;
@@ -588,6 +588,6 @@ w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 curr.w = w;
 curr.U = A*feval(problem.excite,hbm,problem,w0);
-curr.X = hbm_recover3d(hbm,problem,curr.w,curr.U,Xnl);
+curr.X = X;
 curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;

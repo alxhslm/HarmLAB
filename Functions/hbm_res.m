@@ -33,7 +33,7 @@ init.A = A;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.Xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
     problem.wscale = w;
     problem.Fscale = problem.Xscale*0+1;
     problem.Zscale = [problem.Xscale; problem.wscale];
@@ -64,7 +64,7 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = EXITFLAG == 1;
             iter = OUTPUT.iterations + 1;
         case 'ipopt'
-            options.jacobianstructure  = [hbm.sparsity ones(problem.NNL*hbm.harm.NComp,1)];
+            options.jacobianstructure  = [hbm.sparsity ones(problem.NDof*hbm.harm.NComp,1)];
             options.jacobian = @hbm_jacobian;
             options.gradient = @hbm_grad;
             options.print_level = 5;
@@ -90,8 +90,8 @@ W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-x = hbm_recover3d(hbm,problem,w,u,z(1:end-1));
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+x = z(1:end-1);
+X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
 
 sol.w = w;
 sol.W = W;

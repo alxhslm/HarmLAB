@@ -1,6 +1,5 @@
 function varargout = hbm_balance(command,hbm,problem,w,u,x)
 NDofTot = hbm.harm.NComp*problem.NDof;
-NNLTot = hbm.harm.NComp*problem.NNL;
 
 ii = find(hbm.harm.NHarm ~= 0);
 r = hbm.harm.rFreqRatio(ii);
@@ -8,9 +7,8 @@ w0 = w * r + hbm.harm.wFreq0(ii);
 
 A  = (hbm.lin.Ak + w0*hbm.lin.Ac{ii} + w0^2*hbm.lin.Am{ii});
 B  = (hbm.lin.Bk + w0*hbm.lin.Bc{ii} + w0^2*hbm.lin.Bm{ii});
-dA0dw = r*(hbm.lin.Ac{ii} + 2*w0*hbm.lin.Am{ii});
-dBdw  = r*(hbm.lin.Bc{ii} + 2*w0*hbm.lin.Bm{ii});
-[A,R,dAdw,dRdw] = hbm_reduce(hbm,problem,A,dA0dw);
+dAdw  = (hbm.lin.Ac{ii} + 2*w0*hbm.lin.Am{ii});
+dBdw  = (hbm.lin.Bc{ii} + 2*w0*hbm.lin.Bm{ii});
 
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
@@ -20,7 +18,7 @@ switch command
         else
             cnl = 0*cl;
         end
-        c = R*(cl - cnl);
+        c = (cl - cnl);
         varargout{1} = c;
     case 'jacob' %dF_dX, used by hbm_frf & hbm_bb
         Jl = -A;
@@ -31,10 +29,10 @@ switch command
             else
                 c0 = hbm_nonlinear('func',hbm,problem,w0,x,u);
                 h = 1E-12;
-                Jnl2 = zeros(NDofTot,NNLTot);
+                Jnl2 = zeros(NDofTot,NDofTot);
                 x0 = x;
                 u0 = u;
-                for i = 1:NNLTot
+                for i = 1:NDofTot
                     x = x0;
                     x(i) = x(i) + h;
                     c = hbm_nonlinear('func',hbm,problem,w0,x,u0);
@@ -49,11 +47,10 @@ switch command
         else
             Jnl = 0*Jl;
         end
-        J = R*(Jl - Jnl);
+        J = (Jl - Jnl);
         varargout{1} = J;
     case 'derivW' %dF_dw, used by hbm_frf & hbm_bb
         Dl = dBdw*u - dAdw*x;
-        cl = B*u - hbm.lin.b - A*x;
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
@@ -80,7 +77,7 @@ switch command
         else
             Dnl = 0*Dl;
         end
-        D = R*(Dl - Dnl) + dRdw*(cl-cnl);
+        D = (Dl - Dnl);
         varargout{1} = D;
     case 'derivA' %dF_dA, used in hbm_bb
         Dl = B*u;
@@ -90,7 +87,7 @@ switch command
         else
             Dnl = 0*Dl;
         end
-        D = R*(Dl - Dnl);
+        D = (Dl - Dnl);
         varargout{1} = D;
     case 'floquet0'
         D0 = -hbm_balance('jacob',hbm,problem,w0,u,x);
@@ -103,7 +100,7 @@ switch command
         else
             D1nl = 0*D1l;
         end
-        varargout{1} = R*(D1l - D1nl);
+        varargout{1} = (D1l - D1nl);
     case 'floquet2'
         D2l = hbm.lin.floquet.D2;
         if hbm.bIncludeNL
@@ -111,5 +108,5 @@ switch command
         else
             D2nl = 0*D2l;
         end
-        varargout{1} = R*(D2l - D2nl);
+        varargout{1} = (D2l - D2nl);
 end

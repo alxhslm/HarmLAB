@@ -1,6 +1,6 @@
 function lambda = hbm_floquet(hbm,problem,w,U,X)
-if ~(isvector(X) && size(X,1) == hbm.harm.NRetainNL)
-    x = packdof(X(:,problem.iNL),hbm.harm.iRetainNL);
+if ~isvector(X)
+    x = packdof(X);
     u = packdof(U);
 else
     x = X;
@@ -8,7 +8,7 @@ else
 end
 
 if any(isnan(x) | isinf(x))
-    lambda = NaN(hbm.harm.NRetainNL,1);
+    lambda = NaN(hbm.harm.NComp*problem.NDof,1);
     return
 end
 
@@ -29,10 +29,8 @@ for i = 1:NPts
     D1 = hbm_balance3d('floquet1',hbm,problem,w(i),u(:,i),x(:,i));
     D2 = hbm_balance3d('floquet2',hbm,problem,w(i),u(:,i),x(:,i));
 
-    % lambda = polyeig(D0,D1,D2);
-
-    I = eye(hbm.harm.NRetainNL);
-    Z = zeros(hbm.harm.NRetainNL);
+    I = eye(hbm.harm.NComp*problem.NDof);
+    Z = zeros(hbm.harm.NComp*problem.NDof);
 
     B1 = [D1 D0;
           -I  Z];

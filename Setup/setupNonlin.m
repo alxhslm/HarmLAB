@@ -1,6 +1,5 @@
 function nonlin = setupNonlin(harm,problem)
 Nfft = harm.Nfft;
-iRetain = harm.iRetain;
 
 %% fft matrices
 theta1 = 2*pi/Nfft(1)*(0:(Nfft(1)-1));
@@ -40,55 +39,30 @@ end
 aft.Jddot{3} = mtimesx(aft.fft.J,prod(harm.rFreqBase)*aft.ifft.Jddot{3});
 
 function hbm = get_hbm_matrices(problem,harm,aft)
-iRetain = harm.iRetain;
-iRetainNL = harm.iRetainNL;
 
 %hbm
 hbm.Jfft = resize_jacobian(repmat(aft.fft.J,1,size(aft.fft.J,1)),problem.NDof,problem.NDof); 
-hbm.Jfft = hbm.Jfft(iRetain,iRetainNL,:);
 
 hbm.Jifft = resize_jacobian(repmat(aft.ifft.J,size(aft.ifft.J,2),1),problem.NDof,problem.NDof); 
-hbm.Jifft = hbm.Jifft(iRetain,iRetainNL,:);
 
 for i = 1:2
     hbm.Jdotifft{i} = resize_jacobian(repmat(harm.rFreqBase(i)*aft.ifft.Jdot{i},size(aft.ifft.J,2),1),problem.NDof,problem.NDof); 
-    hbm.Jdotifft{i} = hbm.Jdotifft{i}(iRetain,iRetainNL,:);
 end
 
 %% States
-hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NNL); 
-hbm.Jx     = hbm.Jx(iRetain,iRetainNL,:);
-
-hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NNL); 
-for i = 1:2
-    hbm.Jxdot{i}  = hbm.Jxdot{i}(iRetain,iRetainNL,:);
-end
-
-hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NNL); 
-for i = 1:3
-    hbm.Jxddot{i}  = hbm.Jxddot{i}(iRetain,iRetainNL,:);
-end
+hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NDof); 
+hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NDof); 
+hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NDof); 
 
 %% Inputs
 hbm.Ju     = resize_jacobian(aft.J,problem.NDof,problem.NInput); 
-hbm.Ju     = hbm.Ju(iRetain,:,:);
-
 hbm.Judot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NInput); 
-for i = 1:2
-    hbm.Judot{i}  = hbm.Judot{i}(iRetain,:,:);
-end
-
 hbm.Juddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NInput); 
-for i = 1:3
-    hbm.Juddot{i}  = hbm.Juddot{i}(iRetain,:,:);
-end
+
 
 %indices for creating the jacobian
 hbm.ijacobx = repmat((1:problem.NDof)',harm.NComp,1);
-hbm.ijacobx = hbm.ijacobx(iRetain);
 hbm.ijacobu = repmat((1:problem.NInput)',harm.NComp,1);
-hbm.ijacobxnl = repmat(problem.iNL,harm.NComp,1);
-hbm.ijacobxnl = hbm.ijacobxnl(iRetainNL);
 
 function Ju = resize_jacobian(ju,NOutput,NInput)
 if ~iscell(ju)

@@ -7,18 +7,11 @@ end
 NInput = problem.NInput;
 NDof   = problem.NDof;
 
-NHarm  = hbm.harm.NHarm;
-iSub  = hbm.harm.iSub;
-NFreq  = hbm.harm.NFreq;
-Nfft   = hbm.harm.Nfft;
-
-iRetain = hbm.harm.iRetain;
-
 r = hbm.harm.rFreqRatio;
 w0 = w .* r + hbm.harm.wFreq0;
 
-if isvector(x)
-    X = unpackdof(x,NFreq-1,NDof,iRetain);
+if isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
+    X = unpackdof(x,NFreq-1,NDof);
     U = unpackdof(u,NFreq-1,NInput);
 else
     X = x;
