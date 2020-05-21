@@ -3,7 +3,7 @@ problem.type = 'bb';
 
 %first solve @ A0,w0
 sol = hbm_res(hbm,problem,w0,A0,X0);
-x0 = packdof(sol.X);
+x0 = packdof(sol.X(:,problem.iNL));
 if any(isnan(abs(x0(:))))
     error('Failed to solve initial problem')
 end
@@ -15,7 +15,7 @@ init.w = sol.w;
 init.A = A0;
 
 sol = hbm_res(hbm,problem,w0,AEnd,XEnd);
-xEnd = packdof(sol.X);
+xEnd = packdof(sol.X(:,problem.iNL));
 if any(isnan(abs(xEnd(:))))
     error('Failed to solve final problem')
 end
@@ -25,7 +25,7 @@ hbm.bIncludeNL = 1;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
+    problem.Xscale = packdof(xscale(:,problem.iNL))*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
     problem.Ascale = mean([A0 AEnd]);
     problem.Fscale = [problem.Xscale*0+1;1];
@@ -92,9 +92,10 @@ switch hbm.cont.method
             %now try to solve
             xpred = zpred(1:end-2);
             wpred = zpred(end-1);
-            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
+            Xpred = zeros(hbm.harm.NFreq,problem.NDof);
+            Xpred(:,problem.iNL) = unpackdof(xpred,hbm.harm.NFreq-1,problem.NNL);
             sol = hbm_res(hbm,problem,wpred,Apred,Xpred);
-            sol.x = packdof(sol.X);
+            sol.x = packdof(sol.X(:,problem.iNL));
             
             z = [sol.x; sol.w; sol.A];
             t = z - zprev;
@@ -497,10 +498,18 @@ t = t./norm(t);
 function curr = hbm_bb_results(Z,tangent,pred,corr,hbm,problem)
 A = Z(end).*problem.Ascale;
 w = Z(end-1).*problem.wscale;
-x = Z(1:end-2).*problem.Xscale;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+
+z = Z(1:end-2).*problem.Xscale;
+
+U = A*feval(problem.excite,hbm,problem,w0);
+u = packdof(U);
+
+x = hbm_recover(hbm,problem,w,u,z);
+X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
 t = normalise(tangent.*problem.Zscale);
 
-curr.z = [x;w;A];
+curr.z = [z;w;A];
 curr.t = t;
 
 curr.sCorr = corr.step;
@@ -508,11 +517,9 @@ curr.sPred = pred.step;
 curr.it = corr.it;
 curr.flag = '';
 
-w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
-
 curr.w = w;
-curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
-curr.U = A*feval(problem.excite,hbm,problem,w0);
+curr.X = X;
+curr.U = U;
 curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;
 

@@ -1,9 +1,9 @@
 function lambda = hbm_floquet(hbm,problem,w,U,X)
 if ~isvector(X)
-    x = packdof(X);
+    x = packdof(X(:,problem.iNL));
     u = packdof(U);
 else
-    x = X;
+    x = X(hbm.harm.iNL);
     u = U;
 end
 
@@ -29,8 +29,8 @@ for i = 1:NPts
     D1 = hbm_balance3d('floquet1',hbm,problem,w(i),u(:,i),x(:,i));
     D2 = hbm_balance3d('floquet2',hbm,problem,w(i),u(:,i),x(:,i));
 
-    I = eye(hbm.harm.NComp*problem.NDof);
-    Z = zeros(hbm.harm.NComp*problem.NDof);
+    I = eye(hbm.harm.NComp*problem.NNL);
+    Z = zeros(hbm.harm.NComp*problem.NNL);
 
     B1 = [D1 D0;
           -I  Z];

@@ -4,21 +4,23 @@ if hbm.options.bUseStandardHBM
     return;
 end
 NDofTot = hbm.harm.NComp*problem.NDof;
+NNLTot  = hbm.harm.NComp*problem.NNL;
 
 r = hbm.harm.rFreqRatio;
 w0 = w .* r + hbm.harm.wFreq0;
 
-A = hbm.lin.Ak + prod(w0)*hbm.lin.Ax;
-B = hbm.lin.Bk + prod(w0)*hbm.lin.Bx;
-dAdw = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Ax;
-dBdw = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Bx;
+A0 = hbm.lin.Ak + prod(w0)*hbm.lin.Ax;
+B  = hbm.lin.Bk + prod(w0)*hbm.lin.Bx;
+dA0dw = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Ax;
+dBdw  = (r(1)*w0(2) + r(2)*w0(1))*hbm.lin.Bx;
 for k = 1:2
-    A = A + (w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
-    B = B + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
+    A0 = A0 + (w0(k)*hbm.lin.Ac{k} + w0(k)^2*hbm.lin.Am{k});
+    B  = B  + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
 
-    dAdw  = dAdw  + r(k)*(hbm.lin.Ac{k} + 2*w0(k)*hbm.lin.Am{k});
-    dBdw  = dBdw  + r(k)*(hbm.lin.Bc{k} + 2*w0(k)*hbm.lin.Bm{k});
+    dA0dw  = dA0dw  + r(k)*(hbm.lin.Ac{k} + 2*w0(k)*hbm.lin.Am{k});
+    dBdw   = dBdw  + r(k)*(hbm.lin.Bc{k} + 2*w0(k)*hbm.lin.Bm{k});
 end
+[A,R,dAdw,dRdw] = hbm_reduce(hbm,problem,A0,dA0dw);
 
 switch command
     case 'func' %F, used by hbm_frf & hbm_bb
@@ -28,7 +30,7 @@ switch command
         else
             cnl = 0*cl;
         end
-        c = (cl - cnl);
+        c = R*(cl - cnl);
         varargout{1} = c;
     case 'jacob' %dF_dX, used by hbm_frf & hbm_bb
         Jl = -A;
@@ -39,10 +41,10 @@ switch command
             else
                 c0 = hbm_nonlinear3d('func',hbm,problem,w0,x,u);
                 h = 1E-12;
-                Jnl2 = zeros(NDofTot,NDofTot);
+                Jnl2 = zeros(NDofTot,NNLTot);
                 x0 = x;
                 u0 = u;
-                for i = 1:NDofTot
+                for i = 1:NNLTot
                     x = x0;
                     x(i) = x(i) + h;
                     c = hbm_nonlinear3d('func',hbm,problem,w0,x,u0);
@@ -57,7 +59,7 @@ switch command
         else
             Jnl = 0*Jl;
         end
-        J = (Jl - Jnl);
+        J = R*(Jl - Jnl);
         varargout{1} = J;
     case 'derivW' %dF_dw, used by hbm_frf & hbm_bb
         Dl = dBdw*u - dAdw*x;
@@ -65,7 +67,7 @@ switch command
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
                 if hbm.options.bAnalyticalDerivs
-                    [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                    [cnl,Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'func','jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
                     Dxdot  = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x;
                     Dxddot = (2*r(1)*w0(1)*Jxddot{1} + 2*r(2)*w0(2)*Jxddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3})*x;
                     Dudot  = (r(1)*Judot{1} + r(2)*Judot{2})*u;
@@ -93,7 +95,7 @@ switch command
         else
             Dnl = 0*Dl;
         end
-        D = (Dl - Dnl);
+        D = R*(Dl - Dnl) + dRdw*(cl-cnl);
         varargout{1} = D;
     case 'derivA' %dF_dA, used in hbm_bb
         Dl = B*u;
@@ -103,7 +105,7 @@ switch command
         else
             Dnl = 0*Dl;
         end
-        D = (Dl - Dnl);
+        D = R*(Dl - Dnl);
         varargout{1} = D;
     case 'floquet0'
         D0 = -hbm_balance3d('jacob',hbm,problem,w,u,x);
@@ -116,7 +118,7 @@ switch command
         else
             D1nl = 0*D1l;
         end
-        varargout{1} = (D1l - D1nl);
+        varargout{1} = R*(D1l - D1nl);
     case 'floquet2'
         D2l = hbm.lin.floquet.D2;
         if hbm.bIncludeNL
@@ -124,5 +126,5 @@ switch command
         else
             D2nl = 0*D2l;
         end
-        varargout{1} = (D2l - D2nl);
+        varargout{1} = R*(D2l - D2nl);
 end

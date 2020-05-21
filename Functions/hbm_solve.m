@@ -35,7 +35,7 @@ init.A = A;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.Zscale = packdof(xscale);
+    problem.Zscale = packdof(xscale(:,problem.iNL));
     problem.Fscale = problem.Zscale*0+1;
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 else
@@ -49,7 +49,7 @@ bSuccess = false;
 constr_tol = 1E-6;
 maxit = 20;
 
-z0 = x0;
+z0 = packdof(X0(:,problem.iNL));
 Z0 = z0./problem.Zscale;
 
 attempts = 0;
@@ -80,7 +80,8 @@ if ~bSuccess
 end
 z = Z.*problem.Zscale;
 
-X = unpackdof(z,hbm.harm.NFreq-1,problem.NDof);
+x = hbm_recover(hbm,problem,w,u,z);
+X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof);
 
 sol.w = w;
 sol.W = W;

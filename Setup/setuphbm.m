@@ -35,11 +35,12 @@ hbm.cont = setupCont(hbm.cont);
 
 %% Problem definition
 problem = setupProblem(problem,hbm);
+hbm.harm = setupNL(problem,hbm.harm);
 
 if ~isfield(problem,'sparsity')
-    hbm.sparsity = ones(hbm.harm.NComp*problem.NDof);
+    hbm.sparsity = ones(hbm.harm.NComp*problem.NNL);
 else
-    hbm.sparsity = repmat(problem.sparsity(1:problem.NDof,1:problem.NDof),hbm.harm.NComp);
+    hbm.sparsity = repmat(problem.sparsity(problem.iNL,problem.iNL),hbm.harm.NComp);
 end
 
 %% Precompute matrices
@@ -87,7 +88,17 @@ end
 problem.NDof = size(problem.K,2);
 problem.NInput = size(problem.Ku,2);
 
-f = {'K','M','C','G'};
+if ~isfield(problem,'iNL')
+    problem.iNL = (1:problem.NDof)';
+end
+problem.NNL = length(problem.iNL);
+
+tmp = true(problem.NDof,1);
+tmp(problem.iNL) = false;
+problem.iLin = find(tmp);
+problem.NLin = length(problem.iLin);
+
+f = {'K','M','C'};
 for i = 1:length(f)
     if ~isfield(problem,f{i})
         problem.(f{i}) = zeros(problem.NDof);
@@ -192,6 +203,19 @@ States.xddot = zeros(problem.NDof,1);
 States.u = zeros(problem.NInput,1);
 States.udot = zeros(problem.NInput,1);
 States.uddot = zeros(problem.NInput,1);
+
+function harm = setupNL(problem,harm)
+harm.bNL  = false(problem.NDof*harm.NComp,1);
+for j = 1:harm.NFreq
+    if j == 1
+        iNL  = problem.iNL;
+    else
+        iNL  = problem.NDof + 2*(j-2)*problem.NDof + [problem.iNL; problem.NDof + problem.iNL];
+    end
+    harm.bNL(iNL) = true;
+end
+harm.iNL  = find(harm.bNL);
+harm.iLin = find(~harm.bNL);
 
 function s = default_missing(s,f,d)
 for i = 1:length(f)

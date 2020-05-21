@@ -6,14 +6,17 @@ end
 
 NInput = problem.NInput;
 NDof = problem.NDof;
+NNL  = problem.NNL;
 
 NFreq = hbm.harm.NFreq;
 NComp = hbm.harm.NComp;
-NDofTot = NComp*NDof;
+NDofTot   = NComp*NDof;
+NNLTot    = NComp*NNL;
 NInputTot = NComp*NInput;
 
 %work out the time domain
-X = unpackdof(Xp,NFreq-1,NDof);
+X = zeros(NFreq,NDof);
+X(:,problem.iNL) = unpackdof(Xp,NFreq-1,NNL);
 U = unpackdof(Up,NFreq-1,NInput);
 
 %get the time series
@@ -32,8 +35,9 @@ end
 
 varargout = cell(1,length(command));
 
-ijacobx = hbm.nonlin.hbm.ijacobx;
-ijacobu = hbm.nonlin.hbm.ijacobu;
+ijacobx   = hbm.nonlin.hbm.ijacobx;
+ijacobxnl = hbm.nonlin.hbm.ijacobxnl;
+ijacobu   = hbm.nonlin.hbm.ijacobu;
 
 for o = 1:length(command)
     switch command{o}
@@ -56,14 +60,14 @@ for o = 1:length(command)
             varargout{o} = Dw;
         case 'jacobX'  %df_dX = Jx*X
             if ~hbm.dependence.x
-                Jx = zeros(NDofTot,NDofTot);
+                Jx = zeros(NDofTot,NNLTot);
             else
                 States.df_dx = hbm_derivatives('nl','x',States,hbm,problem);
                 
                 if isfield(problem,'jacobX')
                     Jx = feval(problem.jacobX,States,hbm,problem);
                 else
-                    Jx = sum(hbm.nonlin.hbm.Jx.*States.df_dx(ijacobx,ijacobx,:),3);
+                    Jx = sum(hbm.nonlin.hbm.Jx.*States.df_dx(ijacobx,ijacobxnl,:),3);
                 end
             end
             varargout{o} = Jx;
@@ -82,7 +86,7 @@ for o = 1:length(command)
             varargout{o} = Ju;
         case 'jacobXdot' %df_dX = w*Jxdot*X
             if ~hbm.dependence.xdot
-                Jxdot = repmat({zeros(NDofTot,NDofTot)},1,2);
+                Jxdot = repmat({zeros(NDofTot,NNLTot)},1,2);
             else
                 States.df_dxdot = hbm_derivatives('nl','xdot',States,hbm,problem);
 
@@ -90,7 +94,7 @@ for o = 1:length(command)
                     Jxdot = feval(problem.jacobXdot,States,hbm,problem);
                 else
                     for n = 1:2
-                        Jxdot{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*States.df_dxdot(ijacobx,ijacobx,:),3);
+                        Jxdot{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*States.df_dxdot(ijacobx,ijacobxnl,:),3);
                     end
                 end
             end
@@ -112,7 +116,7 @@ for o = 1:length(command)
             varargout{o} = Judot;
         case 'jacobXddot' %df_dX = w^2*Jxddot*X
             if ~hbm.dependence.xddot
-                Jxddot = repmat({zeros(NDofTot,NDofTot)},1,3);
+                Jxddot = repmat({zeros(NDofTot,NNLTot)},1,3);
             else
                 States.df_dxddot = hbm_derivatives('nl','xddot',States,hbm,problem);
                 
@@ -120,7 +124,7 @@ for o = 1:length(command)
                     Jxddot = feval(problem.jacobXdot,States,hbm,problem);
                 else
                     for n = 1:3
-                        Jxddot{n} = sum(hbm.nonlin.hbm.Jxddot{n}.*States.df_dxddot(ijacobx,ijacobx,:),3);
+                        Jxddot{n} = sum(hbm.nonlin.hbm.Jxddot{n}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                     end
                 end
             end
@@ -142,20 +146,20 @@ for o = 1:length(command)
             varargout{o} = Juddot;
         case 'floquet1xdot'
            if ~hbm.dependence.xdot
-                D1 = zeros(NDofTot,NDofTot);
+                D1 = zeros(NDofTot,NNLTot);
             else
                 States.df_dxdot = hbm_derivatives('nl','xdot',States,hbm,problem);
                 
                 if isfield(problem,'floquet1xdot')
                     D1 = feval(problem.floquet1xdot,States,hbm,problem);
                 else
-                    D1 = sum(hbm.nonlin.hbm.Jx.*States.df_dxdot(ijacobx,ijacobx,:),3);
+                    D1 = sum(hbm.nonlin.hbm.Jx.*States.df_dxdot(ijacobx,ijacobxnl,:),3);
                 end
             end
             varargout{o} = D1;
         case 'floquet1xddot'
            if ~hbm.dependence.xddot
-                D1dd = repmat({zeros(NDofTot,NDofTot)},1,2);
+                D1dd = repmat({zeros(NDofTot,NNLTot)},1,2);
             else
                 States.df_dxddot = hbm_derivatives('nl','xddot',States,hbm,problem);
                 
@@ -163,21 +167,21 @@ for o = 1:length(command)
                     D1dd = feval(problem.floquet1xddot,States,hbm,problem);
                 else
                     for n = 1:2
-                        D1dd{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*States.df_dxddot(ijacobx,ijacobx,:),3);
+                        D1dd{n} = sum(hbm.nonlin.hbm.Jxdot{n}.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                     end
                 end
             end
             varargout{o} = D1dd;
        case 'floquet2'
            if ~hbm.dependence.xddot
-               D2 = zeros(NDofTot);
+               D2 = zeros(NDofTot,NNLTot);
            else
                States.df_dxddot = hbm_derivatives('nl','xddot',States,hbm,problem);
                
                if isfield(problem,'floquet2')
                    D2 = feval(problem.floquet2,States,hbm,problem);
                else
-                   D2 = sum(hbm.nonlin.hbm.Jx.*States.df_dxddot(ijacobx,ijacobx,:),3);
+                   D2 = sum(hbm.nonlin.hbm.Jx.*States.df_dxddot(ijacobx,ijacobxnl,:),3);
                end
             end
             varargout{o} = D2;

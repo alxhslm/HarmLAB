@@ -24,6 +24,7 @@ P.f2 = 0.5*rand(1)*exp(1i*pi*rand(1));
 
 P.iDof = 1;
 P.iInput = 1;
+P.iNL = 2;
 
 problem.K = P.k1*[1 0;
                   0 0];
@@ -50,3 +51,5 @@ problem.excite = @test_excite;
 problem.obj = @test_obj;
 
 problem.P = P;
+
+problem.iNL = P.iNL;
