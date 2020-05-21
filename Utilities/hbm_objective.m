@@ -1,4 +1,6 @@
-function varargout = hbm_objective(part,hbm,problem,w,x,u)
+function varargout = hbm_objective(part,hbm,problem,w,xnl,u)
+
+[x,R] = hbm_recover(hbm,problem,w,u,xnl);
 
 NOutput = problem.res.NOutput;
 NInput = problem.res.NInput;
@@ -31,7 +33,7 @@ switch problem.res.output
     case 'none'
         Fnl = 0*x;
     case 'fnl'
-        Fnl = hbm_nonlinear3d({'func'},hbm,problem,w0,x,u);
+        Fnl = hbm_nonlinear3d({'func'},hbm,problem,w0,xnl,u);
     case 'x'
         Fnl = x;
     case 'xdot'
@@ -91,7 +93,7 @@ for i = 1:length(part)
                 case 'none'
                     Jx = 0*Wx;
                 case 'fnl'
-                    Jx = hbm_nonlinear3d({'jacobX'},hbm,problem,w0,x,u);
+                    Jx = hbm_nonlinear3d({'jacobX'},hbm,problem,w0,xnl,u);
                 case 'x'
                     Jx = eye(problem.NDof*hbm.harm.NComp);
                 case 'xdot'
@@ -113,7 +115,7 @@ for i = 1:length(part)
             %put it all together
             dHdx = (dFbdx.*abs(Fe) - abs(Fb).*dFedx)./abs(Fe).^2;
             
-            varargout{i} = dHdx;
+            varargout{i} = dHdx*R;
         case 'derivW'
            
             %nl
@@ -121,7 +123,7 @@ for i = 1:length(part)
                 case 'none'
                     Dw_nl = 0*x;
                 case 'fnl'
-                    Dw = hbm_nonlinear3d({'derivW'},hbm,problem,w0,x,u);
+                    Dw = hbm_nonlinear3d({'derivW'},hbm,problem,w0,xnl,u);
                     if ~iscell(Dw)
                         Dw = {Dw,0*Dw};
                     end

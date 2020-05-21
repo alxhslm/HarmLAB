@@ -13,4 +13,11 @@ lin.b = [problem.F0;
 [floquet.D1xdot,floquet.D1xddot] = linear_jacobian(harm,problem.C,problem.M,0*problem.M);
 floquet.D2 = kron(eye(harm.NComp),problem.M);
 
+%trim to size
+for i = 1:2
+    floquet.D1xddot{i} = floquet.D1xddot{i}(:,harm.iNL);
+end
+floquet.D1xdot = floquet.D1xdot(:,harm.iNL);
+floquet.D2 = floquet.D2(:,harm.iNL);
+
 lin.floquet = floquet;

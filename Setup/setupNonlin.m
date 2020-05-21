@@ -41,18 +41,18 @@ aft.Jddot{3} = mtimesx(aft.fft.J,prod(harm.rFreqBase)*aft.ifft.Jddot{3});
 function hbm = get_hbm_matrices(problem,harm,aft)
 
 %hbm
-hbm.Jfft = resize_jacobian(repmat(aft.fft.J,1,size(aft.fft.J,1)),problem.NDof,problem.NDof); 
+hbm.Jfft = resize_jacobian(repmat(aft.fft.J,1,size(aft.fft.J,1)),problem.NDof,problem.NNL); 
 
-hbm.Jifft = resize_jacobian(repmat(aft.ifft.J,size(aft.ifft.J,2),1),problem.NDof,problem.NDof); 
+hbm.Jifft = resize_jacobian(repmat(aft.ifft.J,size(aft.ifft.J,2),1),problem.NDof,problem.NNL); 
 
 for i = 1:2
-    hbm.Jdotifft{i} = resize_jacobian(repmat(harm.rFreqBase(i)*aft.ifft.Jdot{i},size(aft.ifft.J,2),1),problem.NDof,problem.NDof); 
+    hbm.Jdotifft{i} = resize_jacobian(repmat(harm.rFreqBase(i)*aft.ifft.Jdot{i},size(aft.ifft.J,2),1),problem.NDof,problem.NNL); 
 end
 
 %% States
-hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NDof); 
-hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NDof); 
-hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NDof); 
+hbm.Jx     = resize_jacobian(aft.J,problem.NDof,problem.NNL); 
+hbm.Jxdot  = resize_jacobian(aft.Jdot,problem.NDof,problem.NNL); 
+hbm.Jxddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NNL);
 
 %% Inputs
 hbm.Ju     = resize_jacobian(aft.J,problem.NDof,problem.NInput); 
@@ -63,6 +63,7 @@ hbm.Juddot  = resize_jacobian(aft.Jddot,problem.NDof,problem.NInput);
 %indices for creating the jacobian
 hbm.ijacobx = repmat((1:problem.NDof)',harm.NComp,1);
 hbm.ijacobu = repmat((1:problem.NInput)',harm.NComp,1);
+hbm.ijacobxnl = repmat(problem.iNL(:),harm.NComp,1);
 
 function Ju = resize_jacobian(ju,NOutput,NInput)
 if ~iscell(ju)
