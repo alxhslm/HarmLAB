@@ -56,7 +56,7 @@ switch problem.res.input
         for k = 1:2
             Ju = Ju + (w0(k)*hbm.lin.Bc{k} + w0(k)^2*hbm.lin.Bm{k});
         end
-        Fex = Ju*u -  hbm.lin.b;
+        Fex = Ju*u;
     case 'u'
         Fex = u;
     case 'udot'

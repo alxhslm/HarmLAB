@@ -458,7 +458,7 @@ Jx = hbm_balance3d('jacob' ,hbm,problem,w,u,x);
 Dw = hbm_balance3d('derivW',hbm,problem,w,u,x);
 Da = hbm_balance3d('derivA',hbm,problem,w,u,x);
 
-[~,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A);
+[~,drdx,drdw,drdA] = resonance_condition(hbm,problem,w,x,A);
 
 J = [Jx   Dw    Da;
      drdx drdw drdA];
@@ -517,7 +517,7 @@ curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;
 
 u = packdof(curr.U);
-curr.H = hbm_objective('complex',hbm,problem,w*hbm.harm.rFreqRatio,x,u);
+curr.H = hbm_objective('complex',hbm,problem,w,x,u);
 
 
 function [r,drdx,drdw,drdA] = resonance_condition(hbm,problem,w0,x,A)
