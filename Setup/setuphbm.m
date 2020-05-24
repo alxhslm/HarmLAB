@@ -87,7 +87,7 @@ end
 problem.NDof = size(problem.K,2);
 problem.NInput = size(problem.Ku,2);
 
-f = {'K','M','C'};
+f = {'K','M','C','G'};
 for i = 1:length(f)
     if ~isfield(problem,f{i})
         problem.(f{i}) = zeros(problem.NDof);

@@ -186,11 +186,7 @@ end
 function [xlin, wlin] = getLinearReponse(hbm,problem,X,w,A)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
 w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
-wB = w0.*hbm.harm.rFreqBase;
-NHarm = hbm.harm.NHarm;
-Nfft = hbm.harm.Nfft;
 
-w = hbm.harm.kHarm*wB';
 x0 = X(1,:).';
 U = A*feval(problem.excite,hbm,problem,w0);
 u0 = U(1,:).';
@@ -231,6 +227,7 @@ for i = 1:length(wlin)
     Ku_nl = interpx(wLU,Ku_lu,wlin(i));
  
     M  = problem.M + M_nl;
+    G  = problem.G;
     C  = problem.C + C_nl;
     K  = problem.K + K_nl;
 
@@ -242,7 +239,7 @@ for i = 1:length(wlin)
     
     for k = 1:NFreq
         Fe = (Ku + 1i*w(k,i)*Cu - w(k,i)^2*Mu)*U(k,:).';
-        H = K + 1i*w(k,i)*C - w(k,i)^2 * M;
+        H = K + 1i*w(k,i)*(C+w0(1)*G) - w(k,i)^2 * M;
         xlin(k,:,i) = (H\Fe).';
     end
 end
