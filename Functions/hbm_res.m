@@ -33,10 +33,10 @@ init.A = A;
 
 if isfield(problem,'xscale')
     xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
-    problem.Xscale = packdof(xscale(:,problem.iNL))*sqrt(length(xscale));
+    problem.Xnlscale = packdof(xscale(:,problem.iNL))*sqrt(length(xscale));
     problem.wscale = w;
-    problem.Fscale = problem.Xscale*0+1;
-    problem.Zscale = [problem.Xscale; problem.wscale];
+    problem.Fscale = problem.Xnlscale*0+1;
+    problem.Zscale = [problem.Xnlscale; problem.wscale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 else
     problem = hbm_scaling(problem,hbm,init);
@@ -108,7 +108,7 @@ sol = hbm_excitation_forces(problem,sol);
 sol.it = iter;
 
 function obj = hbm_obj(Z,hbm,problem,A)
-x = Z(1:end-1).*problem.Xscale;
+x = Z(1:end-1).*problem.Xnlscale;
 w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
@@ -119,7 +119,7 @@ H = hbm_objective('func',hbm,problem,w,x,u);
 obj = - problem.res.sign * H;
 
 function G = hbm_grad(Z,hbm,problem,A)
-x = Z(1:end-1).*problem.Xscale;
+x = Z(1:end-1).*problem.Xnlscale;
 w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
@@ -132,7 +132,7 @@ G = -problem.res.sign*[Dx Dw];
 G = G.*problem.Zscale(:)';
 
 function c = hbm_constr(Z,hbm,problem,A)
-x = Z(1:end-1).*problem.Xscale;
+x = Z(1:end-1).*problem.Xnlscale;
 w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
@@ -142,7 +142,7 @@ u = packdof(U);
 c = hbm_balance3d('func',hbm,problem,w,u,x);
 
 function J = hbm_jacobian(Z,hbm,problem,A)
-x = Z(1:end-1).*problem.Xscale;
+x = Z(1:end-1).*problem.Xnlscale;
 w = Z(end).*problem.wscale;
 w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
