@@ -1,22 +1,31 @@
-function lambda = hbm_floquet(hbm,problem,w,U,X)
-if ~isvector(X)
-    x = packdof(X);
-    u = packdof(U);
-else
-    x = X;
-    u = U;
+function sol = hbm_floquet(hbm,problem,sol)
+if length(sol) > 1
+    [sol.L] = deal(0);
+    for i = 1:length(sol)
+        sol(i) = hbm_floquet(hbm,problem,sol(i));
+    end
+    return;
 end
+
+if ~isvector(sol.X)
+    x = packdof(sol.X);
+    u = packdof(sol.U);
+else
+    x = sol.X;
+    u = sol.U;
+end
+w = sol.w;
 
 if any(isnan(x) | isinf(x))
     lambda = NaN(hbm.harm.NComp*problem.NDof,1);
-    return
+else
+    [A,B] = floquetMatrices(hbm,problem,w,u,x);
+    lambda = eig(A,B,'vector');
+    [~,iSort] = sort(abs(imag(lambda)));
+    lambda = lambda(iSort);
 end
 
-[A,B] = floquetMatrices(hbm,problem,w,u,x);
-lambda = eig(A,B,'vector');
-[~,iSort] = sort(abs(imag(lambda)));
-lambda = lambda(iSort);
-
+sol.L = lambda;
 
 function [A,B] = floquetMatrices(hbm,problem,w,u,x)
 hbm.bIncludeNL = 1;

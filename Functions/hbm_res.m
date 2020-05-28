@@ -102,6 +102,7 @@ sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 %floquet multipliers & objective
 sol.H = hbm_objective('complex',hbm,problem,w,z(1:end-1),u);
+sol = hbm_floquet(hbm,problem,sol);
 sol = hbm_excitation_forces(problem,sol);
 
 sol.it = iter;

@@ -90,7 +90,7 @@ sol.U = U;
 sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 % floquet multipliers
-sol.L = hbm_floquet(hbm,problem,w,sol.U,sol.X);
+sol = hbm_floquet(hbm,problem,sol);
 
 %excitation forces
 sol = hbm_excitation_forces(problem,sol);

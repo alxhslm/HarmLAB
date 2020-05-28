@@ -390,10 +390,7 @@ if ~isfield(results,'W')
 end
 
 if ~isfield(results,'L')
-    for i = 1:NPts
-        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
-        results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
-    end
+    results = hbm_floquet(hbm,problem,results);
 end
 
 results = hbm_excitation_forces(problem,results);

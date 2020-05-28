@@ -403,9 +403,7 @@ if ~isfield(results,'W')
 end
 
 if ~isfield(results,'L')
-    for i = 1:NPts
-        results(i).L = hbm_floquet(hbm,problem,results(i).w,results(i).U,results(i).X);
-    end
+    results = hbm_floquet(hbm,problem,results);
 end
 
 results = hbm_excitation_forces(problem,results);
