@@ -92,6 +92,9 @@ sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 % floquet multipliers
 sol.L = hbm_floquet(hbm,problem,w,sol.U,sol.X);
 
+%excitation forces
+sol = hbm_excitation_forces(problem,sol);
+
 sol.it = iter;
 
 function [c,J] = hbm_constraints(Z,hbm,problem,w,u)

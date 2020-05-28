@@ -396,6 +396,7 @@ if ~isfield(results,'L')
     end
 end
 
+results = hbm_excitation_forces(problem,results);
 
 %% Predictor
 function X_extrap = polynomial_predictor(Z,dZ,s_extrap)
