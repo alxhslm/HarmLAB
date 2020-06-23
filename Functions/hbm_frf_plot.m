@@ -91,11 +91,7 @@ ws = abs(hbm.harm.kHarm(:,1)*w(1,:) + hbm.harm.kHarm(:,2)*w(2,:));
 ws(ws == 0) = w0;
 
 function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,w,xlin,wlin0)
-matlabPos = getMatlabSize;
-figPos = matlabPos;
-figPos(4) = matlabPos(4)/2;
-figPos(2) = matlabPos(2) + figPos(4);
-fMag = figure('Name',[problem.name],'OuterPosition',figPos,'WindowStyle', 'Docked');
+fMag = figure('Name',['FRF: ' problem.name]);
 
 wlin = getfrequencies(wlin0,hbm);
 wlim = getfrequencies([problem.wMin problem.wMax],hbm);

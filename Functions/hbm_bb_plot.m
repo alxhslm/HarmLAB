@@ -59,11 +59,7 @@ end
 
 
 function [fig,axBB,hBB] = createFig(hbm,problem,A,H,w)
-matlabPos = getMatlabSize;
-figPos = matlabPos;
-figPos(4) = matlabPos(4)/2;
-figPos(2) = matlabPos(2) + figPos(4);
-fig = figure('Name',[problem.name],'OuterPosition',figPos,'WindowStyle', 'Docked');
+fig = figure('Name',['BB: ' problem.name]);
 
 axBB(1) = subplot(2,1,1);
 hBB(1) = plot(axBB(1),A,w,'g.-');

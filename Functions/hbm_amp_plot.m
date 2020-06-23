@@ -85,11 +85,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,A,xlin,Alin)
-% matlabPos = getMatlabSize;
-% figPos = matlabPos;
-% figPos(4) = matlabPos(4)/2;
-% figPos(2) = matlabPos(2) + figPos(4);
-fMag = figure('Name',[problem.name]);%,'OuterPosition',figPos,'WindowStyle', 'Docked');
+fMag = figure('Name',['Amp: ' problem.name]);
 
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:size(problem.RDofPlot,1)
