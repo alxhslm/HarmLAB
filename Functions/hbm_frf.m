@@ -65,7 +65,13 @@ prog.Status = 'success';
 
 switch hbm.cont.method
     case 'none'
-        hbm_frf_plot('init',hbm,problem,init);
+        if hbm.options.bPlot
+            hbm_frf_plot('init',hbm,problem,init);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 0);
+        end
+        
         wscale = mean([w0 wEnd]);
         
         pred.step = hbm.cont.step0;
@@ -121,17 +127,26 @@ switch hbm.cont.method
                 results(end+1) = curr(end);
                 wsol(end+1) = results(end).w;
                 zsol(:,end+1) = results(end).z;
-                hbm_frf_plot('data',hbm,problem,results(end));
+                if hbm.options.bPlot
+                    hbm_frf_plot('data',hbm,problem,results(end));
+                end
+
                 prog.NFail = 0;
                 if wsol(end) >= wMax || wsol(end) <= wMin
                     break;
                 end
                 zprev = curr(end).z;
+                
+                if ~isempty(problem.update)
+                    feval(problem.update, (results(end).w - w0)/(wEnd-w0));
+                end
             else
                 curr(end).flag = 'Failed: No convergence';
                 pred.step = pred.step * hbm.cont.c;
                 prog.NFail = prog.NFail + 1;
-                hbm_frf_plot('err',hbm,problem,curr(end));
+                if hbm.options.bPlot
+                    hbm_frf_plot('err',hbm,problem,curr(end));
+                end
                 if prog.NFail > hbm.cont.maxfail
                     prog.Status = 'Too many failed iterations';
                     break;
@@ -148,8 +163,13 @@ switch hbm.cont.method
         curr(end+1) = hbm_frf_results(zEnd,t,pred,corr,hbm,problem);
         results(end+1) = curr(end);
         
-        hbm_frf_plot('close',hbm,problem,[]);
-        
+        if hbm.options.bPlot
+            hbm_frf_plot('close',hbm,problem,[]);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 1);
+        end
+
     case 'predcorr'
        prog.NStep = 1;
        prog.NFail = 0;
@@ -196,14 +216,22 @@ switch hbm.cont.method
         curr = hbm_frf_results(Zprev,Tprev,pred,corr,hbm,problem);
         results = curr;
         
-        hbm_frf_plot('init',hbm,problem,init);
-        fprintf('STEP    PRED    CORR   STATUS  INFO   ITER   TOT    FREQ      ')
-        fprintf('Z(%d)       ',1:length(z0))
-        fprintf('\n')
-        fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,pred.step,corr.step,'S','Ini',corr.it,prog.NIter,results(end).w)
-        fprintf('%+5.2e  ',results(end).z)
-        fprintf('\n')       
+        if hbm.options.bPlot
+            hbm_frf_plot('init',hbm,problem,init);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 0);
+        end
         
+        if hbm.options.bVerbose
+            fprintf('STEP    PRED    CORR   STATUS  INFO   ITER   TOT    FREQ      ')
+            fprintf('Z(%d)       ',1:length(z0))
+            fprintf('\n')
+            fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,pred.step,corr.step,'S','Ini',corr.it,prog.NIter,results(end).w)
+            fprintf('%+5.2e  ',results(end).z)
+            fprintf('\n')       
+        end
+
         zsol = results.z;
         tsol = results.t;
 
@@ -289,8 +317,10 @@ switch hbm.cont.method
             if bConverged && curr(end).sCorr >= hbm.cont.min_step && curr(end).sCorr <= hbm.cont.max_step && curr(end).w > 0
                 %success
                 status = 'S';
-                hbm_frf_plot('data',hbm,problem,curr(end));
-                
+                if hbm.options.bPlot
+                    hbm_frf_plot('data',hbm,problem,curr(end));
+                end
+
                 if corr.it <= hbm.cont.num_iter_increase
                     pred.step = min(curr(end).sPred * hbm.cont.C,hbm.cont.max_step/curr(end).sCorr*curr(end).sPred);
                     curr(end).flag = 'Success: Increasing step size';
@@ -322,9 +352,15 @@ switch hbm.cont.method
                 Tprev = Tsol(:,end);
 
                 prog.NFail = 0;
+                
+                if ~isempty(problem.update)
+                    feval(problem.update, (results(end).w - w0)/(wEnd-w0));
+                end
             else
-            	%failed
-                hbm_frf_plot('err',hbm,problem,curr(end));
+                %failed
+                if hbm.options.bPlot
+                    hbm_frf_plot('err',hbm,problem,curr(end));
+                end
                 status = 'F';
                 
                 if curr(end).w < 0
@@ -378,9 +414,11 @@ switch hbm.cont.method
                 end
             end
             
-            fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,curr(end).sPred,curr(end).sCorr,status,info,corr.it,prog.NIter,curr(end).w)
-            fprintf('%+5.2e  ',curr(end).z)
-            fprintf('\n')
+            if hbm.options.bVerbose
+                fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,curr(end).sPred,curr(end).sCorr,status,info,corr.it,prog.NIter,curr(end).w)
+                fprintf('%+5.2e  ',curr(end).z)
+                fprintf('\n')
+            end
         end
         
         %add on final point
@@ -390,7 +428,12 @@ switch hbm.cont.method
         curr(end+1) = hbm_frf_results(Zend,Tend,pred,corr,hbm,problem);
         results(end+1) = curr(end);
 
-        hbm_frf_plot('close',hbm,problem,[]);
+        if hbm.options.bPlot
+            hbm_frf_plot('close',hbm,problem,[]);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 1);
+        end
 end
 
 NPts = length(results);

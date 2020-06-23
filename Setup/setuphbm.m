@@ -66,6 +66,9 @@ end
 function options = setupOptions(options)
 if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
 if ~isfield(options,'bUseStandardHBM'), options.bUseStandardHBM = 0; end
+if ~isfield(options,'bVerbose'), options.bVerbose = 1; end
+if ~isfield(options,'bPlot'), options.bPlot = 1; end
+
 if ~isfield(options,'solver'), options.solver = 'ipopt'; end
 
 function dependence = setupDependence(dependence)
@@ -122,6 +125,10 @@ end
 
 if ~isfield(problem,'iGroup')
     problem.iGroup = ones(problem.NDof,1);
+end
+
+if ~isfield(problem,'update')
+    problem.update = [];
 end
 
 if isfield(problem,'res')
