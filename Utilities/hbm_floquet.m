@@ -6,14 +6,15 @@ if length(sol) > 1
     end
     return;
 end
-
-if ~isvector(sol.X)
+   
+if size(sol.X,1) == hbm.harm.NFreq && size(sol.X,2) == problem.NDof
     x = packdof(sol.X);
     u = packdof(sol.U);
 else
     x = sol.X;
     u = sol.U;
 end
+
 w = sol.w;
 
 if any(isnan(x) | isinf(x))

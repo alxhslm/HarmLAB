@@ -4,19 +4,13 @@ problem.type = 'resonance';
 if nargin < 5 || isempty(X0)
     X0 = zeros(hbm.harm.NFreq,problem.NDof);
 end
-if isvector(X0) 
-    if length(X0) == hbm.harm.NComp*problem.NDof
-        x0 = X0;
-        X0 = unpackdof(x0,hbm.harm.NHarm,problem.NDof);
-    else
-        error('Wrong size for X0');
-    end
+if size(X0,1) == hbm.harm.NFreq && size(X0,2) == problem.NDof
+    x0 = packdof(X0);
+elseif isvector(X0) && length(X0) == hbm.harm.NComp*problem.NDof
+    x0 = X0;
+    X0 = unpackdof(x0,hbm.harm.NHarm,problem.NDof);
 else
-    if size(X0,1) == hbm.harm.NFreq && size(X0,2) == problem.NDof
-        x0 = packdof(X0);
-    else
-        error('Wrong size for X0');
-    end
+    error('Wrong size for X0');
 end
 
 %setup the problem for IPOPT

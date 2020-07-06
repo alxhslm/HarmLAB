@@ -10,12 +10,12 @@ NDof   = problem.NDof;
 r = hbm.harm.rFreqRatio;
 w0 = w .* r + hbm.harm.wFreq0;
 
-if isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
-    X = unpackdof(x,NFreq-1,NDof);
-    U = unpackdof(u,NFreq-1,NInput);
-else
+if size(x,1) == hbm.harm.NFreq && size(x,2) == problem.NDof
     X = x;
     U = u;
+elseif  isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
+    X = unpackdof(x,NFreq-1,NDof);
+    U = unpackdof(u,NFreq-1,NInput);
 end
 
 %work out the time domain
@@ -27,8 +27,8 @@ o = feval(problem.model,'output',States,hbm,problem);
 %finally convert into a fourier series
 O = hbm.nonlin.FFT*o.';
 
-if isvector(x)
-    o = packdof(O);
-else
+if size(x,1) == hbm.harm.NFreq && size(x,2) == problem.NDof
     o = O;
+else
+    o = packdof(O);    
 end

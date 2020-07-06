@@ -7,12 +7,12 @@ ii = find(NHarm ~= 0);
 r = hbm.harm.rFreqRatio(ii);
 w0 = w * r + hbm.harm.wFreq0(ii);
 
-if isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
-    X = unpackdof(x,NFreq-1,NDof);
-    U = unpackdof(u,NFreq-1,NInput);
-else
+if size(x,1) == hbm.harm.NFreq && size(x,2) == problem.NDof
     X = x;
     U = u;
+elseif  isvector(x) && size(x,1) == hbm.harm.NComp*problem.NDof
+    X = unpackdof(x,NFreq-1,NDof);
+    U = unpackdof(u,NFreq-1,NInput);
 end
 
 %work out the time domain
