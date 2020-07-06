@@ -184,7 +184,12 @@ if isfield(problem,'res')
         error('Wrong size for ROutput')
     end
     
-    
+    if ~isfield(problem.res,'wMin')
+        problem.res.wMin = -Inf;
+    end
+    if ~isfield(problem.res,'wMax')
+        problem.res.wMax =  Inf;
+    end
 end
 
 function States = empty_states(problem)

@@ -46,6 +46,9 @@ maxit = 20;
 
 Z0 = [z0; w]./problem.Zscale;
 
+zlb = [z0-Inf;problem.res.wMin./problem.wscale];
+zub = [z0+Inf;problem.res.wMax./problem.wscale];
+
 attempts = 0;
 while ~bSuccess && attempts < hbm.max_iter
     switch hbm.options.solver
@@ -54,7 +57,7 @@ while ~bSuccess && attempts < hbm.max_iter
             fun_constr = @(x)hbm_fsolve_constr(x,hbm,problem,A);
             options = optimoptions('fmincon','SpecifyObjectiveGradient',true,'SpecifyConstraintGradient',true,'Display','iter',...
                 'OptimalityTolerance',opt_tol,'ConstraintTolerance',constr_tol,'MaxIterations',maxit);
-            [Z,~,EXITFLAG,OUTPUT] = fmincon(fun_obj,Z0,[],[],[],[],[],[],fun_constr,options);
+            [Z,~,EXITFLAG,OUTPUT] = fmincon(fun_obj,Z0,[],[],[],[],zlb,zub,fun_constr,options);
             bSuccess = EXITFLAG == 1;
             iter = OUTPUT.iterations + 1;
         case 'ipopt'
@@ -65,6 +68,8 @@ while ~bSuccess && attempts < hbm.max_iter
             options.max_iter = maxit;
             options.tol = opt_tol;
             options.constr_viol_tol = constr_tol;
+            options.lb = zlb;
+            options.ub = zub;
             [Z, info] = fipopt(@hbm_obj,Z0,@hbm_constr,options,hbm,problem,A);           
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
