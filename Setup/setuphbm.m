@@ -123,10 +123,6 @@ catch
      error('Error detected in non-linear function')
 end
 
-if ~isfield(problem,'iGroup')
-    problem.iGroup = ones(problem.NDof,1);
-end
-
 if ~isfield(problem,'update')
     problem.update = [];
 end
