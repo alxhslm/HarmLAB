@@ -109,7 +109,7 @@ switch command
         D0 = -hbm_balance3d('jacob',hbm,problem,w,u,x);
         varargout{1} = D0;
     case 'floquet1'
-        D1l = hbm.lin.floquet.D1xdot + 2*w0(1)*hbm.lin.floquet.D1xddot{1} + 2*w0(2)*hbm.lin.floquet.D1xddot{2};
+        D1l = hbm.lin.floquet.D1xdot + hbm.lin.floquet.D1Gxdot*w0(1) + 2*(w0(1)*hbm.lin.floquet.D1xddot{1} + w0(2)*hbm.lin.floquet.D1xddot{2});
         if hbm.bIncludeNL
             [D1xdot,D1xddot] = hbm_nonlinear3d({'floquet1xdot','floquet1xddot'},hbm,problem,w0,x,u);
             D1nl = D1xdot + 2*w0(1)*D1xddot{1} + 2*w0(2)*D1xddot{2};

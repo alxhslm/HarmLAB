@@ -11,6 +11,7 @@ lin.b = [problem.F0;
 
 %% floquet multipliers
 [floquet.D1xdot,floquet.D1xddot] = linear_jacobian(harm,problem.C,problem.M,0*problem.M);
+floquet.D1Gxdot  = linear_jacobian(harm,problem.G,0*problem.M,0*problem.M);
 floquet.D2 = kron(eye(harm.NComp),problem.M);
 
 lin.floquet = floquet;
