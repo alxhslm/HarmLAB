@@ -85,11 +85,7 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,A,xlin,Alin)
-% matlabPos = getMatlabSize;
-% figPos = matlabPos;
-% figPos(4) = matlabPos(4)/2;
-% figPos(2) = matlabPos(2) + figPos(4);
-fMag = figure('Name',[problem.name]);%,'OuterPosition',figPos,'WindowStyle', 'Docked');
+fMag = figure('Name',['Amp: ' problem.name]);
 
 for i = 1:length(hbm.harm.iHarmPlot)
     for j = 1:size(problem.RDofPlot,1)
@@ -173,31 +169,19 @@ if isempty(s)
     s = '0';
 end
 
-function [xlin, Alin] = getLinearReponse(hbm,problem,X,w0)
+function [xlin, Alin] = getLinearReponse(hbm,problem,X,w)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
-w0 = w0*hbm.harm.rFreqRatio;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 wB = w0.*hbm.harm.rFreqBase;
-NHarm = hbm.harm.NHarm;
-Nfft = hbm.harm.Nfft;
-
-Alin = linspace(problem.A0,problem.AEnd,1000);
-
 w = hbm.harm.kHarm*wB';
+
 x0 = X(1,:).';
 U = feval(problem.excite,hbm,problem,w0);
+u0 = U(1,:).';
 
 States = hbm_states3d(w0,X,U,hbm);
 
-% %create the time series from the fourier series
-% x     = repmat(x0,1,prod(Nfft))';
-% xdot  = 0*x;
-% xddot = 0*x;
-% 
-% %create the vector of inputs
-% u     = repmat(u0,1,prod(Nfft))';
-% udot  = 0*u;
-% uddot = 0*u;
-
+Alin = linspace(problem.A0,problem.AEnd,1000);
 xlin = zeros(hbm.harm.NFreq,problem.NDof,length(Alin));
 
 %now loop over all the amplitudes
@@ -213,6 +197,7 @@ for i = 1:length(Alin)
     Ku_nl = mean(Ku_nl,3); Cu_nl = mean(Cu_nl,3); Mu_nl = mean(Mu_nl,3);
 
     M  = problem.M + M_nl;
+    G  = problem.G;
     C  = problem.C + C_nl;
     K  = problem.K + K_nl;
 
@@ -224,7 +209,7 @@ for i = 1:length(Alin)
     
     for k = 1:NFreq
         Fe = (Ku + 1i*w(k)*Cu - w(k)^2*Mu)*Alin(i)*U(k,:).';
-        H = K + 1i*w(k)*C - w(k)^2 * M;
+        H = K + 1i*w(k)*(C + w0(1)*G) - w(k)^2 * M;
         xlin(k,:,i) = (H\Fe).';
     end
 end

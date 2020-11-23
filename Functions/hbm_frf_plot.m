@@ -86,16 +86,12 @@ for i = 1:length(hbm.harm.iHarmPlot)
 end
 
 function ws = getfrequencies(w0,hbm)
-w = (hbm.harm.rFreqBase.*hbm.harm.rFreqRatio)'*w0;
+w = hbm.harm.rFreqBase'.*(hbm.harm.rFreqRatio'*w0 + hbm.harm.wFreq0');
 ws = abs(hbm.harm.kHarm(:,1)*w(1,:) + hbm.harm.kHarm(:,2)*w(2,:));
 ws(ws == 0) = w0;
 
 function [fMag,hSuccess,hWarn,hErr] = createFRF(hbm,problem,x,w,xlin,wlin0)
-matlabPos = getMatlabSize;
-figPos = matlabPos;
-figPos(4) = matlabPos(4)/2;
-figPos(2) = matlabPos(2) + figPos(4);
-fMag = figure('Name',[problem.name],'OuterPosition',figPos,'WindowStyle', 'Docked');
+fMag = figure('Name',['FRF: ' problem.name]);
 
 wlin = getfrequencies(wlin0,hbm);
 wlim = getfrequencies([problem.wMin problem.wMax],hbm);
@@ -183,14 +179,10 @@ if isempty(s)
     s = '0';
 end
 
-function [xlin, wlin] = getLinearReponse(hbm,problem,X,w0,A)
+function [xlin, wlin] = getLinearReponse(hbm,problem,X,w,A)
 %find the linearised contribution to the stiffness/damping due from the non-linearity
-w0 = w0*hbm.harm.rFreqRatio;
-wB = w0.*hbm.harm.rFreqBase;
-NHarm = hbm.harm.NHarm;
-Nfft = hbm.harm.Nfft;
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
-w = hbm.harm.kHarm*wB';
 x0 = X(1,:).';
 U = A*feval(problem.excite,hbm,problem,w0);
 u0 = U(1,:).';
@@ -198,7 +190,8 @@ u0 = U(1,:).';
 %compute a LU table of frequency dependent stiffness etc
 wLU = linspace(problem.wMin,problem.wMax,10);
 for i = 1:length(wLU)
-    States = hbm_states3d(wLU(i),X,U,hbm);
+    w0 = wLU(i) * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+    States = hbm_states3d(w0,X,U,hbm);
     States.f = feval(problem.model,'nl',States,hbm,problem);
 
     [K_nl, C_nl, M_nl]  = hbm_derivatives('nl',{'x','xdot','xddot'},States,hbm,problem);
@@ -218,7 +211,7 @@ NFreq = hbm.harm.NFreq;
 %work out frequencies
 w = getfrequencies(wlin,hbm);
 for i = 1:length(wlin)
-    w0 = wlin(i);
+    w0 = wlin(i) * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
     
     %interpolate into LU table
     M_nl = interpx(wLU,M_lu,wlin(i));
@@ -230,18 +223,19 @@ for i = 1:length(wlin)
     Ku_nl = interpx(wLU,Ku_lu,wlin(i));
  
     M  = problem.M + M_nl;
+    G  = problem.G;
     C  = problem.C + C_nl;
     K  = problem.K + K_nl;
 
-    Mu = problem.Mu + Mu_nl;
-    Cu = problem.Cu + Cu_nl;
-    Ku = problem.Ku + Ku_nl;
+    Mu = problem.Mu - Mu_nl;
+    Cu = problem.Cu - Cu_nl;
+    Ku = problem.Ku - Ku_nl;
     
     U = A*feval(problem.excite,hbm,problem,w0);
     
     for k = 1:NFreq
         Fe = (Ku + 1i*w(k,i)*Cu - w(k,i)^2*Mu)*U(k,:).';
-        H = K + 1i*w(k,i)*C - w(k,i)^2 * M;
+        H = K + 1i*w(k,i)*(C+w0(1)*G) - w(k,i)^2 * M;
         xlin(k,:,i) = (H\Fe).';
     end
 end

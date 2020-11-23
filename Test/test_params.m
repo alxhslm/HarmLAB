@@ -10,7 +10,7 @@ P.c2 = 0.05;
 P.c3 = 0.05;
 
 P.cnl = 0*[0 0 0.005]';
-P.knl = 0*[0 0 0.004]';
+P.knl = [0 0 0.004]';
 P.n = 3;
 
 P.R = [1 0;
@@ -20,7 +20,7 @@ P.R = [1 0;
 %forcing
 P.f0 = 0;
 P.f = 2*rand(1)*exp(1i*pi*rand(1));
-P.f2 = 0*rand(1)*exp(1i*pi*rand(1));
+P.f2 = 0.5*rand(1)*exp(1i*pi*rand(1));
 
 P.iDof = 1;
 P.iInput = 1;
@@ -49,5 +49,4 @@ problem.model = @test_model;
 problem.excite = @test_excite;
 problem.obj = @test_obj;
 
-problem.iNL = 2;%[1;2];
 problem.P = P;

@@ -4,36 +4,34 @@ problem.type = 'solve';
 if nargin < 5 || isempty(X0)
     X0 = zeros(hbm.harm.NFreq,problem.NDof);
 end
-if ~isvector(X0)  && size(X0,1) == hbm.harm.NComp*problem.NDof
+if size(X0,1) == hbm.harm.NFreq && size(X0,2) == problem.NDof
+    x0 = packdof(X0);
+elseif isvector(X0) && length(X0) == hbm.harm.NComp*problem.NDof
     x0 = X0;
+    X0 = unpackdof(x0,hbm.harm.NHarm,problem.NDof);
 else
-    x0 = packdof(X0(:,problem.iNL),hbm.harm.iRetainNL);
+    error('Wrong size for X0');
 end
 
 %setup the problem for IPOPT
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
+
 %we have an initial guess vector
-w0 = w*hbm.harm.rFreqRatio;
 U = A*feval(problem.excite,hbm,problem,w0);
-
-hbm.bIncludeNL = true;
-
 u = packdof(U);
 
-iRetain = hbm.harm.iRetain;
-NComp = hbm.harm.NComp;
-NRetainNL  = hbm.harm.NRetainNL;
+hbm.bIncludeNL = true;
 
 init.X = X0;
 init.w = w;
 init.A = A;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
-    problem.Fscale = problem.xscale*0+1;
-    problem.Jscale = (1./problem.Fscale(:))*problem.xscale(:)';
+if isfield(problem,'xscale')
+    xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];
+    problem.Zscale = packdof(xscale);
+    problem.Fscale = problem.Zscale*0+1;
+    problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
 else
     problem = hbm_scaling(problem,hbm,init);
 end
@@ -46,7 +44,7 @@ constr_tol = 1E-6;
 maxit = 20;
 
 z0 = x0;
-Z0 = z0./problem.xscale;
+Z0 = z0./problem.Zscale;
 
 attempts = 0;
 while ~bSuccess && attempts < hbm.max_iter
@@ -67,40 +65,42 @@ while ~bSuccess && attempts < hbm.max_iter
             bSuccess = any(info.status == [0 1]);
             iter = info.iter;
     end
-    Z0 = Z + 1E-8*rand(NRetainNL,1);
+    Z0 = Z + 1E-8*rand(length(Z),1);
     attempts = attempts + 1;
 end
+
 if ~bSuccess
     Z = Z + NaN;
 end
 z = Z.*problem.Zscale;
 
-x = hbm_recover(hbm,problem,w0(1),u,z);
-X = unpackdof(x,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+X = unpackdof(z,hbm.harm.NFreq-1,problem.NDof);
 
 sol.w = w;
+sol.W = W;
 sol.A = A;
 sol.X = X;
 sol.U = U;
-sol.F = hbm_output3d(hbm,problem,w0,sol.U,sol.X);
+sol.F = hbm_output3d(hbm,problem,w,sol.U,sol.X);
 
 % floquet multipliers
-sol.L = hbm_floquet(hbm,problem,w0,sol.U,sol.X);
+sol = hbm_floquet(hbm,problem,sol);
+
+%excitation forces
+sol = hbm_excitation_forces(problem,sol);
 
 sol.it = iter;
 
-function [c,J] = hbm_constraints(Z,hbm,problem,w0,u)
+function [c,J] = hbm_constraints(Z,hbm,problem,w,u)
 %unpack the inputs
-x = Z.*problem.xscale;
-w = w0*hbm.harm.rFreqRatio;
+x = Z.*problem.Zscale;
 c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 if nargout > 1
-    J = hbm_jacobian(Z,hbm,problem,w0,u);
+    J = hbm_jacobian(Z,hbm,problem,w,u);
 end
 
-function J = hbm_jacobian(Z,hbm,problem,w0,u)
-x = Z.*problem.xscale;
-w0 = w0*hbm.harm.rFreqRatio;
-J = hbm_balance3d('jacob',hbm,problem,w0,u,x);
+function J = hbm_jacobian(Z,hbm,problem,w,u)
+x = Z.*problem.Zscale;
+J = hbm_balance3d('jacob',hbm,problem,w,u,x);
 J = J .* problem.Jscale;

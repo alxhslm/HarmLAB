@@ -4,7 +4,7 @@ problem.A = A;
 
 %first solve @ w0
 sol = hbm_solve(hbm,problem,w0,A,X0);
-x0 = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+x0 = packdof(sol.X);
 u0 = packdof(sol.U);
 f0 = packdof(sol.F);
 if any(isnan(abs(x0(:))))
@@ -23,7 +23,7 @@ init.w = w0;
 init.A = A;
 
 sol = hbm_solve(hbm,problem,wEnd,A,XEnd);
-xEnd = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+xEnd = packdof(sol.X);
 uEnd = packdof(sol.U);
 fEnd = packdof(sol.F);
 if any(isnan(abs(xEnd(:))))
@@ -39,14 +39,13 @@ zEnd = [xEnd;wEnd];
 
 hbm.bIncludeNL = 1;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+if isfield(problem,'xscale')
+    xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
+    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
     problem.wscale = mean([w0 wEnd]);
-    problem.Fscale = problem.xscale*0+1;
-    problem.Zscale = [problem.xscale; problem.wscale];
+    problem.Fscale = problem.Xscale*0+1;
+    
+    problem.Zscale = [problem.Xscale; problem.wscale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
     bUpdateScaling = 0;
 else
@@ -66,13 +65,19 @@ prog.Status = 'success';
 
 switch hbm.cont.method
     case 'none'
-        hbm_frf_plot('init',hbm,problem,init);
+        if hbm.options.bPlot
+            hbm_frf_plot('init',hbm,problem,init);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 0);
+        end
+        
         wscale = mean([w0 wEnd]);
         
         pred.step = hbm.cont.step0;
         direction = sign(wEnd-w0)*wscale;
         
-        problem.xscale = 0*problem.xscale + 1;
+        problem.Xscale = 0*problem.Xscale + 1;
         problem.wscale = 1;
         problem.Zscale = 0*problem.Zscale + 1;
         
@@ -105,9 +110,9 @@ switch hbm.cont.method
            
             %now try to solve
             xpred = zpred(1:end-1);
-            Xpred(:,problem.iNL) = unpackdof(xpred,hbm.harm.NFreq-1,problem.NNL,hbm.harm.iRetainNL);
+            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
             sol = hbm_solve(hbm,problem,wpred,A,Xpred);
-            sol.x = packdof(sol.X(:,problem.iNL),hbm.harm.iRetainNL);
+            sol.x = packdof(sol.X);
             
             z = [sol.x; sol.w];
             t = z - zprev;
@@ -122,17 +127,26 @@ switch hbm.cont.method
                 results(end+1) = curr(end);
                 wsol(end+1) = results(end).w;
                 zsol(:,end+1) = results(end).z;
-                hbm_frf_plot('data',hbm,problem,results(end));
+                if hbm.options.bPlot
+                    hbm_frf_plot('data',hbm,problem,results(end));
+                end
+
                 prog.NFail = 0;
                 if wsol(end) >= wMax || wsol(end) <= wMin
                     break;
                 end
                 zprev = curr(end).z;
+                
+                if ~isempty(problem.update)
+                    feval(problem.update, (results(end).w - w0)/(wEnd-w0));
+                end
             else
                 curr(end).flag = 'Failed: No convergence';
                 pred.step = pred.step * hbm.cont.c;
                 prog.NFail = prog.NFail + 1;
-                hbm_frf_plot('err',hbm,problem,curr(end));
+                if hbm.options.bPlot
+                    hbm_frf_plot('err',hbm,problem,curr(end));
+                end
                 if prog.NFail > hbm.cont.maxfail
                     prog.Status = 'Too many failed iterations';
                     break;
@@ -149,8 +163,13 @@ switch hbm.cont.method
         curr(end+1) = hbm_frf_results(zEnd,t,pred,corr,hbm,problem);
         results(end+1) = curr(end);
         
-        hbm_frf_plot('close',hbm,problem,[]);
-        
+        if hbm.options.bPlot
+            hbm_frf_plot('close',hbm,problem,[]);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 1);
+        end
+
     case 'predcorr'
        prog.NStep = 1;
        prog.NFail = 0;
@@ -197,14 +216,22 @@ switch hbm.cont.method
         curr = hbm_frf_results(Zprev,Tprev,pred,corr,hbm,problem);
         results = curr;
         
-        hbm_frf_plot('init',hbm,problem,init);
-        fprintf('STEP    PRED    CORR   STATUS  INFO   ITER   TOT    FREQ      ')
-        fprintf('Z(%d)       ',1:length(z0))
-        fprintf('\n')
-        fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,pred.step,corr.step,'S','Ini',corr.it,prog.NIter,results(end).w)
-        fprintf('%+5.2e  ',results(end).z)
-        fprintf('\n')       
+        if hbm.options.bPlot
+            hbm_frf_plot('init',hbm,problem,init);
+        end
+        if ~isempty(problem.update)
+            feval(problem.update, 0);
+        end
         
+        if hbm.options.bVerbose
+            fprintf('STEP    PRED    CORR   STATUS  INFO   ITER   TOT    FREQ      ')
+            fprintf('Z(%d)       ',1:length(z0))
+            fprintf('\n')
+            fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,pred.step,corr.step,'S','Ini',corr.it,prog.NIter,results(end).w)
+            fprintf('%+5.2e  ',results(end).z)
+            fprintf('\n')       
+        end
+
         zsol = results.z;
         tsol = results.t;
 
@@ -290,8 +317,10 @@ switch hbm.cont.method
             if bConverged && curr(end).sCorr >= hbm.cont.min_step && curr(end).sCorr <= hbm.cont.max_step && curr(end).w > 0
                 %success
                 status = 'S';
-                hbm_frf_plot('data',hbm,problem,curr(end));
-                
+                if hbm.options.bPlot
+                    hbm_frf_plot('data',hbm,problem,curr(end));
+                end
+
                 if corr.it <= hbm.cont.num_iter_increase
                     pred.step = min(curr(end).sPred * hbm.cont.C,hbm.cont.max_step/curr(end).sCorr*curr(end).sPred);
                     curr(end).flag = 'Success: Increasing step size';
@@ -323,9 +352,15 @@ switch hbm.cont.method
                 Tprev = Tsol(:,end);
 
                 prog.NFail = 0;
+                
+                if ~isempty(problem.update)
+                    feval(problem.update, (results(end).w - w0)/(wEnd-w0));
+                end
             else
-            	%failed
-                hbm_frf_plot('err',hbm,problem,curr(end));
+                %failed
+                if hbm.options.bPlot
+                    hbm_frf_plot('err',hbm,problem,curr(end));
+                end
                 status = 'F';
                 
                 if curr(end).w < 0
@@ -379,9 +414,11 @@ switch hbm.cont.method
                 end
             end
             
-            fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,curr(end).sPred,curr(end).sCorr,status,info,corr.it,prog.NIter,curr(end).w)
-            fprintf('%+5.2e  ',curr(end).z)
-            fprintf('\n')
+            if hbm.options.bVerbose
+                fprintf('%3d   %6.4f  %6.4f    %s       %3s   %3d   %3d   %6.2f   ',prog.NStep,curr(end).sPred,curr(end).sCorr,status,info,corr.it,prog.NIter,curr(end).w)
+                fprintf('%+5.2e  ',curr(end).z)
+                fprintf('\n')
+            end
         end
         
         %add on final point
@@ -391,66 +428,28 @@ switch hbm.cont.method
         curr(end+1) = hbm_frf_results(Zend,Tend,pred,corr,hbm,problem);
         results(end+1) = curr(end);
 
-        hbm_frf_plot('close',hbm,problem,[]);
-    case 'coco'
-        rng('shuffle')
-        currdir = pwd;
-        cd(desktoproot);
-        name = ['temp' num2str(round(rand(1)*1E12))];
-        while exist(['data' filesep name],'dir')
-            name = ['temp' num2str(round(rand(1)*1E12))];
+        if hbm.options.bPlot
+            hbm_frf_plot('close',hbm,problem,[]);
         end
-        data.hbm = hbm;
-        data.problem = problem;
-        data.A = A;
-        
-        prob = coco_prob();
-        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', z0./problem.Zscale);
-        prob = coco_add_pars(prob, 'pars', length(z0), 'w');
-        prob = coco_add_slot(prob, 'plot', @hbm_coco_callback, data, 'bddat');
-        
-        prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
-        prob = coco_set(prob,'ep','bifus',false);
-        bd = coco(prob, name, [], 1, 'w', [wMin wMax]./problem.wscale);
-        hbm_frf_plot('close',hbm,problem,[]);
-        
-        %extract the solutions
-        lab_col = coco_bd_col(bd, 'TYPE');
-        NPts = sum(cellfun(@(x)~isempty(x),lab_col));
-        pred.step = 0;
-        corr.step = 0;
-        corr.it = 0;
-        for i = 1:NPts
-            chart = coco_read_solution(name,i,'chart');
-            pred.step = chart.R;
-            corr.step = chart.R;
-            Z = chart.x(1:end-1);
-            T = chart.t(1:end-1);
-            results(i) = hbm_frf_results(Z,T,pred,corr,hbm,problem);
+        if ~isempty(problem.update)
+            feval(problem.update, 1);
         end
-        fclose all;
-        try
-            rmdir(['data' filesep name],'s')
-        end
-        cd(currdir);
-        prog.Status = 'success';
 end
 
 NPts = length(results);
 
 if ~isfield(results,'W')
     for i = 1:NPts
-        results(i).W = (hbm.harm.kHarm*(hbm.harm.rFreqRatio.*hbm.harm.rFreqBase)')*results(i).w;
+        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+        results(i).W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
     end
 end
 
 if ~isfield(results,'L')
-    for i = 1:NPts
-        w0 = results(i).w*hbm.harm.rFreqRatio;
-        results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
-    end
+    results = hbm_floquet(hbm,problem,results);
 end
 
+results = hbm_excitation_forces(problem,results);
 
 %% Predictor
 function X_extrap = polynomial_predictor(Z,dZ,s_extrap)
@@ -484,31 +483,31 @@ end
 %% Constraints and Jacobian
 function c = hbm_frf_constraints(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
+c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 
 function J = hbm_frf_jacobian(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 w = Z(end).*problem.wscale;
 A = problem.A;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Dw = hbm_balance3d('derivW',hbm,problem,w0,u,x);
+Jx = hbm_balance3d('jacob' ,hbm,problem,w,u,x);
+Dw = hbm_balance3d('derivW',hbm,problem,w,u,x);
 
 J = [Jx Dw];
 J = J .* problem.Jscale;
@@ -528,35 +527,6 @@ J = hbm_frf_jacobian(Z,hbm,problem);
 sgn = sign((Z - corr.Zprev)' * corr.Tprev);
 J(end+1,:) = sgn*((Z - corr.Zprev)'+eps)/(1*(norm(Z - corr.Zprev)+eps));
 
-%% Coco functions
-function [data, res] = hbm_coco_callback(prob, data, command, varargin)
-hbm = data.hbm;
-problem = data.problem;
-
-switch command
-    case 'init'
-        x = prob.efunc.x0(1:end-1).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-        init.w = prob.efunc.x0(end).*problem.wscale;
-        init.A = data.A;
-        hbm_frf_plot('init',hbm,problem,init);
-    case 'data'
-        chart = varargin{1};
-        x = chart.x(1:end-2).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-        curr.w = chart.x(end).*problem.wscale;
-        curr.A = data.A;
-        hbm_frf_plot('data',hbm,problem,curr);
-end
-
-res = {};
-
-function [data,c] = hbm_coco_constraints(prob, data, u)
-c = hbm_frf_constraints(u,data.hbm,data.problem);
-
-function [data, J] = hbm_coco_jacobian(prob, data, u)
-J = hbm_frf_jacobian(u,data.hbm,data.problem);
-
 %% Utilities
 function y = norm2(x)
 y = sqrt(sum(x.^2,1));
@@ -572,12 +542,12 @@ t = t./norm(t);
 
 function curr = hbm_frf_results(Z,tangent,pred,corr,hbm,problem)
 w = Z(end).*problem.wscale;
-xnl = Z(1:end-1).*problem.xscale;
-Xnl = unpackdof(xnl,hbm.harm.NHarm,problem.NNL,hbm.harm.iRetainNL);
+x = Z(1:end-1).*problem.Xscale;
+X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
 A = problem.A;
 t = normalise(tangent.*problem.Zscale);
 
-curr.z = [xnl; w];
+curr.z = [x; w];
 curr.t = t;
 
 curr.sCorr = corr.step;
@@ -585,8 +555,10 @@ curr.sPred = pred.step;
 curr.it = corr.it;
 curr.flag = '';
 
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+
 curr.w = w;
-curr.U = A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
-curr.X = hbm_recover(hbm,problem,curr.w*hbm.harm.rFreqRatio(1),curr.U,Xnl);
-curr.F = hbm_output3d(hbm,problem,curr.w*hbm.harm.rFreqRatio,curr.U,curr.X);
+curr.U = A*feval(problem.excite,hbm,problem,w0);
+curr.X = X;
+curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;

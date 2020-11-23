@@ -4,7 +4,7 @@ problem.w0 = w0;
 
 %first solve @ A0
 sol = hbm_solve(hbm,problem,w0,A0,X0);
-x0 = packdof(sol.X,hbm.harm.iRetain);
+x0 = packdof(sol.X);
 if any(isnan(abs(x0(:))))
     error('Failed to solve initial problem')
 end
@@ -15,7 +15,7 @@ init.w = w0;
 init.A = A0;
 
 sol = hbm_solve(hbm,problem,w0,AEnd,XEnd);
-xEnd = packdof(sol.X,hbm.harm.iRetain);
+xEnd = packdof(sol.X);
 if any(isnan(abs(xEnd(:))))
     error('Failed to solve final problem')
 end
@@ -23,14 +23,12 @@ zEnd = [xEnd;AEnd];
 
 hbm.bIncludeNL = 1;
 
-if isfield(problem,'xhscale')
-    xdc  = problem.x0scale(:)';
-    xmax = problem.xhscale(:)';
-    xscale = [xdc; repmat(xmax,hbm.harm.NFreq-1,1)*(1+1i)];
-    problem.xscale = packdof(xscale,hbm.harm.iRetain)*sqrt(length(xscale));
+if isfield(problem,'xscale')
+    xscale = [problem.xscale'; repmat(problem.xscale',hbm.harm.NFreq-1,1)*(1+1i)];   
+    problem.Xscale = packdof(xscale)*sqrt(length(xscale));
     problem.Ascale = mean([A0 AEnd]);
-    problem.Fscale = problem.xscale*0+1;
-    problem.Zscale = [problem.xscale; problem.Ascale];
+    problem.Fscale = problem.Xscale*0+1;
+    problem.Zscale = [problem.Xscale; problem.Ascale];
     problem.Jscale = (1./problem.Fscale(:))*problem.Zscale(:)';
     bUpdateScaling = 0;
 else
@@ -57,7 +55,7 @@ switch hbm.cont.method
         pred.step = hbm.cont.step0;
         direction = sign(AEnd-A0)*Ascale;
         
-        problem.xscale = 0*problem.xscale + 1;
+        problem.Xscale = 0*problem.Xscale + 1;
         problem.Ascale = 1;
         problem.Zscale = 0*problem.Zscale + 1;
         
@@ -91,7 +89,7 @@ switch hbm.cont.method
             
             %now try to solve
             xpred = zpred(1:end-1);
-            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof,hbm.harm.iRetain);
+            Xpred = unpackdof(xpred,hbm.harm.NFreq-1,problem.NDof);
             sol = hbm_solve(hbm,problem,w0,Apred,Xpred);
             sol.x = packdof(sol.X);
             
@@ -377,65 +375,22 @@ switch hbm.cont.method
         results(end+1) = curr(end);
 
         hbm_amp_plot('close',hbm,problem,[]);
-    case 'coco'
-        rng('shuffle')
-        currdir = pwd;
-        cd(desktoproot);
-        name = ['temp' num2str(round(rand(1)*1E12))];
-        while exist(['data' filesep name],'dir')
-            name = ['temp' num2str(round(rand(1)*1E12))];
-        end
-        data.hbm = hbm;
-        data.problem = problem;
-        data.w = w0;
-        
-        prob = coco_prob();
-        prob = coco_add_func(prob, 'alg', @hbm_coco_constraints, @hbm_coco_jacobian, data, 'zero','u0', z0./problem.Zscale);
-        prob = coco_add_pars(prob, 'pars', length(z0), 'A');
-        prob = coco_add_slot(prob, 'plot', @hbm_coco_callback, data, 'bddat');
-        
-        prob = coco_set(prob,'cont','h0',hbm.cont.step0,'h_min',hbm.cont.min_step,'h_max',hbm.cont.max_step,'ItMX',hbm.cont.coco.ItMX,'NPR',hbm.cont.coco.NPR);
-        prob = coco_set(prob,'ep','bifus',false);
-        bd = coco(prob, name, [], 1, 'A', [AMin AMax]./problem.Ascale);
-        hbm_amp_plot('close',hbm,problem,[]);
-        
-        %extract the solutions
-        lab_col = coco_bd_col(bd, 'TYPE');
-        NPts = sum(cellfun(@(x)~isempty(x),lab_col));
-        pred.step = 0;
-        corr.step = 0;
-        corr.it = 0;
-        for i = 1:NPts
-            chart = coco_read_solution(name,i,'chart');
-            pred.step = chart.R;
-            corr.step = chart.R;
-            Z = chart.x(1:end-1);
-            T = chart.t(1:end-1);
-            results(i) = hbm_amp_results(Z,T,pred,corr,hbm,problem);
-        end
-        fclose all;
-        try
-            rmdir(['data' filesep name],'s')
-        end
-        cd(currdir);
-        prog.Status = 'success';
 end
 
 NPts = length(results);
 
 if ~isfield(results,'W')
     for i = 1:NPts
-        results(i).W = (hbm.harm.kHarm*(hbm.harm.rFreqRatio.*hbm.harm.rFreqBase)')*results(i).w;
+        w0 = results(i).w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+        results(i).W = hbm.harm.kHarm*(hbm.harm.rFreqBase.*w0)';
     end
 end
 
 if ~isfield(results,'L')
-    for i = 1:NPts
-        w0 = results(i).w*hbm.harm.rFreqRatio;
-        results(i).L = hbm_floquet(hbm,problem,w0,results(i).U,results(i).X);
-    end
+    results = hbm_floquet(hbm,problem,results);
 end
 
+results = hbm_excitation_forces(problem,results);
 
 %% Predictor
 function X_extrap = polynomial_predictor(Z,dZ,s_extrap)
@@ -469,31 +424,31 @@ end
 %% Constraints and Jacobian
 function c = hbm_amp_constraints(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 A = Z(end).*problem.Ascale;
 w = problem.w0;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-c = hbm_balance3d('func',hbm,problem,w0,u,x);
+c = hbm_balance3d('func',hbm,problem,w,u,x);
 c = c ./ problem.Fscale;
 
 function J = hbm_amp_jacobian(Z,hbm,problem)
 %unpack the inputs
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 A = Z(end).*problem.Ascale;
 w = problem.w0;
 
-w0 = w * hbm.harm.rFreqRatio;
+w0 = w * hbm.harm.rFreqRatio + hbm.harm.wFreq0;
 
 U = A*feval(problem.excite,hbm,problem,w0);
 u = packdof(U);
 
-Jx = hbm_balance3d('jacob',hbm,problem,w0,u,x);
-Da = hbm_balance3d('derivA',hbm,problem,w0,u,x);
+Jx = hbm_balance3d('jacob' ,hbm,problem,w,u,x);
+Da = hbm_balance3d('derivA',hbm,problem,w,u,x);
 
 J = [Jx  Da];
 J = J .* problem.Jscale;
@@ -513,34 +468,6 @@ J = hbm_amp_jacobian(Z,hbm,problem);
 sgn = sign((Z - corr.Zprev)' * corr.Tprev);
 J(end+1,:) = sgn*((Z - corr.Zprev)'+eps)/(1*(norm(Z - corr.Zprev)+eps));
 
-%% Coco functions
-function [data, res] = hbm_coco_callback(prob, data, command, varargin)
-hbm = data.hbm;
-problem = data.problem;
-
-switch command
-    case 'init'
-        x = prob.efunc.x0(1:end-1).*problem.xscale;
-        init.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-        init.A = prob.efunc.x0(end).*problem.Ascale;
-        init.w = data.w;
-        hbm_amp_plot('init',hbm,problem,init);
-    case 'data'
-        chart = varargin{1};
-        x = chart.x(1:end-2).*problem.xscale;
-        curr.X  = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-        curr.A = chart.x(end).*problem.Ascale;
-        curr.w = data.w;
-        hbm_amp_plot('data',hbm,problem,curr);
-end     
-res = {};
-
-function [data,c] = hbm_coco_constraints(prob, data, u)
-c = hbm_amp_constraints(u,data.hbm,data.problem);
-
-function [data, J] = hbm_coco_jacobian(prob, data, u)
-J = hbm_amp_jacobian(u,data.hbm,data.problem);
-
 %% Utilities
 function y = norm2(x)
 y = sqrt(sum(x.^2,1));
@@ -556,7 +483,7 @@ t = t./norm(t);
 
 function curr = hbm_amp_results(Z,tangent,pred,corr,hbm,problem)
 A = Z(end).*problem.Ascale;
-x = Z(1:end-1).*problem.xscale;
+x = Z(1:end-1).*problem.Xscale;
 w = problem.w0;
 t = normalise(tangent.*problem.Zscale);
 
@@ -568,8 +495,10 @@ curr.sPred = pred.step;
 curr.it = corr.it;
 curr.flag = '';
 
+w0 = w*hbm.harm.rFreqRatio + hbm.harm.wFreq0;
+
 curr.w = w;
-curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof,hbm.harm.iRetain);
-curr.U = A*feval(problem.excite,hbm,problem,curr.w*hbm.harm.rFreqRatio);
-curr.F = hbm_output3d(hbm,problem,curr.w*hbm.harm.rFreqRatio,curr.U,curr.X);
+curr.X = unpackdof(x,hbm.harm.NHarm,problem.NDof);
+curr.U = A*feval(problem.excite,hbm,problem,w0);
+curr.F = hbm_output3d(hbm,problem,curr.w,curr.U,curr.X);
 curr.A = A;
