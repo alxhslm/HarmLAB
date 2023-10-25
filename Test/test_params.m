@@ -47,6 +47,5 @@ problem.Ku = [0;1];
 
 problem.model = @test_model;
 problem.excite = @test_excite;
-problem.obj = @test_obj;
 
 problem.P = P;

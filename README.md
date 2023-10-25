@@ -1,7 +1,11 @@
 # HarmLAB
 This toolbox offers an implementation of the Generalised Harmonic Balance method in MATLAB, supporting up to 2 base frequencies. This library can find periodic and quasi-periodic solutions of non-linear ODEs expressed in the following general form:
 
-$$M_x \ddot{x} + C_x \dot{x} + K_x x+ f_{nl}\left({x},\dot{{x}},\ddot{{x}},{u},\dot{{u}},\ddot{{u}},\omega\right)={f}_e (t) = {M}_u\ddot{{u}} + {C}_u\dot{{u}}+{K}_u{u}$$
+$$M_x \ddot{x} + C_x \dot{x} + K_x x + f_0 + f_{nl}\left({x},\dot{{x}},\ddot{{x}},{u},\dot{{u}},\ddot{{u}},\omega\right)={f}_e (t) = {M}_u\ddot{{u}} + {C}_u\dot{{u}}+{K}_u{u}$$
+
+with an output given by:
+
+$$y = g(x, \dot{x}, \ddot{x}, u, \dot{u}, \ddot{u} )$$
 
 This toolbox has been developed to solve problems in structural dynamics, so much of the notation and terminology used stems from this field. However, it could equally be applied to problems in a variety of other disciplines.
 
@@ -50,3 +54,33 @@ For the predictor-corrector algorithm, two different types of corrector can be u
 * Arc-length using either ```fipopt``` or ```fsolve``` to find the solution
 
 Analytical jacbobians have been implemented throughout to speed up the execution.
+
+# Usage
+## Problem structure
+The `problem` structure defines the system being simulated. This must have the following fields for the linear parts of the system:
+- The mass, stiffness and damping matrices `K`, `C`, `M`
+- The constant term `F0` (which defaults to `zeros`)
+- The matrices for the excitation `Ku`, `Cu`, `Mu`
+
+The non-linear parts must be specified via 2 additional fields:
+
+- `model` is a callback specified by the user which must have the form:
+    ``` MATLAB
+    function varargout = test_model(part,States,hbm,problem)
+    ...
+    end
+    ```
+    where `part` can be one of:
+  - `nl` which means this function should return $f_{nl}$
+  - `nl_x`, `nl_xdot`, `nl_xddot` which means this function should return $\frac{\partial f_{nl}}{\partial x}$ etc
+  - `nl_u`, `nl_udot`, `nl_uddot` which means this function should return $\frac{\partial f_{nl}}{\partial u}$ etc
+  - `output` which means this function should return the output $y$
+- `excite` which is another callback which must has the form:
+    ``` MATLAB
+    function U = test_excite(hbm, problem, w0)
+    ...
+    end
+    ```
+    and returns the `U_k`.
+
+You can also store other useful information in the `problem` structure which is needed by your model (eg model parameters).
