@@ -1,15 +1,20 @@
 # HarmLAB
 This toolbox offers an implementation of the Generalised Harmonic Balance method in MATLAB, supporting up to 2 base frequencies. This library can find periodic and quasi-periodic solutions of non-linear ODEs expressed in the following general form:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\mathbf{M}_x\ddot{\mathbf{x}}&space;&plus;&space;\mathbf{C}_x\dot{\mathbf{x}}&plus;\mathbf{K}_x\mathbf{x}&space;&plus;&space;\mathbf{f}_{nl}\left(\right&space;\mathbf{x}&space;,\dot{\mathbf{x}},\ddot{\mathbf{x}},\mathbf{u},\dot{\mathbf{u}},\ddot{\mathbf{u}},\omega)=\mathbf{f}_e&space;(t)&space;=&space;\mathbf{M}_u\ddot{\mathbf{u}}&space;&plus;&space;\mathbf{C}_u\dot{\mathbf{u}}&plus;\mathbf{K}_u\mathbf{u}" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\mathbf{M}_x\ddot{\mathbf{x}}&space;&plus;&space;\mathbf{C}_x\dot{\mathbf{x}}&plus;\mathbf{K}_x\mathbf{x}&space;&plus;&space;\mathbf{f}_{nl}\left(\right&space;\mathbf{x}&space;,\dot{\mathbf{x}},\ddot{\mathbf{x}},\mathbf{u},\dot{\mathbf{u}},\ddot{\mathbf{u}},\omega)=\mathbf{f}_e&space;(t)&space;=&space;\mathbf{M}_u\ddot{\mathbf{u}}&space;&plus;&space;\mathbf{C}_u\dot{\mathbf{u}}&plus;\mathbf{K}_u\mathbf{u}" title="\mathbf{M}_x\ddot{\mathbf{x}} + \mathbf{C}_x\dot{\mathbf{x}}+\mathbf{K}_x\mathbf{x} + \mathbf{f}_{nl}\left(\right \mathbf{x} ,\dot{\mathbf{x}},\ddot{\mathbf{x}},\mathbf{u},\dot{\mathbf{u}},\ddot{\mathbf{u}},\omega)=\mathbf{f}_e (t) = \mathbf{M}_u\ddot{\mathbf{u}} + \mathbf{C}_u\dot{\mathbf{u}}+\mathbf{K}_u\mathbf{u}" /></a>
+$$M_x \ddot{x} + C_x \dot{x} + K_x x+ f_{nl}\left({x},\dot{{x}},\ddot{{x}},{u},\dot{{u}},\ddot{{u}},\omega\right)={f}_e (t) = {M}_u\ddot{{u}} + {C}_u\dot{{u}}+{K}_u{u}$$
 
 This toolbox has been developed to solve problems in structural dynamics, so much of the notation and terminology used stems from this field. However, it could equally be applied to problems in a variety of other disciplines.
 
 The input is assumed to be of the following multi-harmonic form:
 
-<a href="https://www.codecogs.com/eqnedit.php?latex=\mathbf{u}&space;=&space;A&space;\sum_{k}&space;\Re\left(\mathbf{U}_{k}&space;e^{k\omega&space;t}\right)" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\mathbf{u}&space;=&space;A&space;\sum_{k}&space;\Re\left(\mathbf{U}_{k}&space;e^{k\omega&space;t}\right)" title="\mathbf{u} = A \sum_{k} \Re\left(\mathbf{U}_{k} e^{k\omega t}\right)" /></a>
+$${u} = A \sum_{k} \Re\left({U}_{k} e^{k\omega t}\right)$$
 
-where the variable <a href="https://www.codecogs.com/eqnedit.php?latex=\inline&space;A" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\inline&space;A" title="A" /></a> controls the excitation level.
+where the variable $A$ controls the excitation level.
+
+The output is assumed to contain content at the same frequencies, so can be expressed as:
+
+$${x} = \sum_{k} \Re\left({X}_{k} e^{k\omega t}\right)$$
+
 ## Types of problem
 
 ### One-off problems
