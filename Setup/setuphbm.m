@@ -161,8 +161,10 @@ if isfield(problem,'res')
     switch problem.res.output
         case 'none'
             problem.res.NOutput = 1;
-        otherwise
+        case 'x'
            problem.res.NOutput = problem.NDof;
+        otherwise
+            error('invalid output')
     end
     
     if ~isfield(problem.res,'ROutput')
