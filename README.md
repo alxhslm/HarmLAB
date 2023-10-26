@@ -80,10 +80,9 @@ The `res` structure should have the following fields to set the numerator and de
 ## HBM structure
 The other key structure needed to solve problems is the `hbm` structure, which stores information about the harmonics and other options. This has the following fields:
 - `harm` contains information about harmonics
-- `dependence` contains information about the form of $f_nl$
+- `dependence` contains information about the form of $f_{nl}$
 - `cont` contains settings for the continuation algorithm
 - `options` contains settings for the continuation algorithm
-
 
 ### `harm` structure
 This must have the following fields:
@@ -113,7 +112,7 @@ If method is `predcorr`, you can set the following additional settings in the `c
 - `C` and `c` which sets the ratio to increase/decrease stepsize after a successful/unsuccessful step
 
 ### `options` structure
-This sets other more general options
+This sets other more general options and can have the following fields:
 - `bAnalyticalDerivs`: if set to `False` then the derivatives of $f_{nl}$ will be computed from numerical differentiation, and it is not necessary for the `model` callback to return the derivatives
 - `bUseStandardHBM`: force the solver to use the standard HBM when there is a single base frequency.
 - `bVerbose`: toggle whether to suppress output to console
