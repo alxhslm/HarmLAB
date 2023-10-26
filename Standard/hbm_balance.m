@@ -23,27 +23,8 @@ switch command
     case 'jacob' %dF_dX, used by hbm_frf & hbm_bb
         Jl = -A;
         if hbm.bIncludeNL
-            if hbm.options.bAnalyticalDerivs
-                [Jx,Jxdot,Jxddot] = hbm_nonlinear({'jacobX','jacobXdot','jacobXddot'},hbm,problem,w0,x,u);
-                Jnl1 = Jx + w0*Jxdot + w0^2*Jxddot;
-            else
-                c0 = hbm_nonlinear('func',hbm,problem,w0,x,u);
-                h = 1E-12;
-                Jnl2 = zeros(NDofTot,NDofTot);
-                x0 = x;
-                u0 = u;
-                for i = 1:NDofTot
-                    x = x0;
-                    x(i) = x(i) + h;
-                    c = hbm_nonlinear('func',hbm,problem,w0,x,u0);
-                    Jnl2(:,i) = (c-c0)./h;
-                end
-            end
-            if hbm.options.bAnalyticalDerivs
-                Jnl = Jnl1;
-            else
-                Jnl = Jnl2;
-            end
+            [Jx,Jxdot,Jxddot] = hbm_nonlinear({'jacobX','jacobXdot','jacobXddot'},hbm,problem,w0,x,u);
+            Jnl = Jx + w0*Jxdot + w0^2*Jxddot;
         else
             Jnl = 0*Jl;
         end
@@ -53,24 +34,12 @@ switch command
         Dl = dBdw*u - dAdw*x;
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
-                if hbm.options.bAnalyticalDerivs
-                    [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
-                    Dxdot = r*Jxdot*x;
-                    Dxddot = 2*r*w0*Jxddot*x;
-                    Dudot = r*Judot*u;
-                    Duddot = 2*r*w0*Juddot*u;
-                    Dnl1 = Dxdot + Dxddot + Dudot + Duddot + Dw;
-                else
-                    cnl = hbm_nonlinear('func',hbm,problem,w0,x,u);
-                    h = 1E-10;
-                    c = hbm_nonlinear('func',hbm,problem,w0+h,x,u);
-                    Dnl2 = r*(c-cnl)./h;
-                end
-                if hbm.options.bAnalyticalDerivs
-                    Dnl = Dnl1;
-                else
-                    Dnl = Dnl2;
-                end
+                [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                Dxdot = r*Jxdot*x;
+                Dxddot = 2*r*w0*Jxddot*x;
+                Dudot = r*Judot*u;
+                Duddot = 2*r*w0*Juddot*u;
+                Dnl = Dxdot + Dxddot + Dudot + Duddot + Dw;
             else
                 Dnl = 0*Dl;
             end

@@ -17,8 +17,6 @@ if b3d
     hbm.harm.iHarmPlot(end+1) = 3;
 end
 
-hbm.options.bAnalyticalDerivs = true;
-
 omega = sqrt(eig(problem.K,problem.M));
 w0 = 4;
 A = 100;

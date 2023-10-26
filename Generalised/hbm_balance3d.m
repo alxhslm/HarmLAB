@@ -33,27 +33,8 @@ switch command
     case 'jacob' %dF_dX, used by hbm_frf & hbm_bb
         Jl = -A;
         if hbm.bIncludeNL
-            if hbm.options.bAnalyticalDerivs
-                [Jx,Jxdot,Jxddot] = hbm_nonlinear3d({'jacobX','jacobXdot','jacobXddot'},hbm,problem,w0,x,u);
-                Jnl1 = Jx + w0(1)*Jxdot{1} + w0(2)*Jxdot{2} + w0(1)^2*Jxddot{1} + w0(2)^2*Jxddot{2} + prod(w0)*Jxddot{3};
-            else
-                c0 = hbm_nonlinear3d('func',hbm,problem,w0,x,u);
-                h = 1E-12;
-                Jnl2 = zeros(NDofTot,NDofTot);
-                x0 = x;
-                u0 = u;
-                for i = 1:NDofTot
-                    x = x0;
-                    x(i) = x(i) + h;
-                    c = hbm_nonlinear3d('func',hbm,problem,w0,x,u0);
-                    Jnl2(:,i) = (c-c0)./h;
-                end
-            end
-            if hbm.options.bAnalyticalDerivs
-                Jnl = Jnl1;
-            else
-                Jnl = Jnl2;
-            end
+            [Jx,Jxdot,Jxddot] = hbm_nonlinear3d({'jacobX','jacobXdot','jacobXddot'},hbm,problem,w0,x,u);
+            Jnl = Jx + w0(1)*Jxdot{1} + w0(2)*Jxdot{2} + w0(1)^2*Jxddot{1} + w0(2)^2*Jxddot{2} + prod(w0)*Jxddot{3};
         else
             Jnl = 0*Jl;
         end
@@ -64,29 +45,13 @@ switch command
         cl = B*u - hbm.lin.b - A*x;
         if hbm.bIncludeNL
             if hbm.dependence.xdot || hbm.dependence.w
-                if hbm.options.bAnalyticalDerivs
-                    [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
-                    Dxdot  = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x;
-                    Dxddot = (2*r(1)*w0(1)*Jxddot{1} + 2*r(2)*w0(2)*Jxddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3})*x;
-                    Dudot  = (r(1)*Judot{1} + r(2)*Judot{2})*u;
-                    Duddot = (2*r(1)*w0(1)*Juddot{1} + 2*r(2)*w0(2)*Juddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Juddot{3})*u;
-                    Dw = r(1)*Dw{1} + r(2)*Dw{2};
-                    Dnl1 = Dxdot + Dxddot + Dudot + Duddot + Dw;
-                else
-                    cnl = hbm_nonlinear3d('func',hbm,problem,w0,x,u);
-                    h = 1E-10;
-                    for i = 1:2
-                        w02 = w0; w02(i) = w02(i) + h;
-                        c = hbm_nonlinear3d('func',hbm,problem,w02,x,u);
-                        Dw2{i} =  (c-cnl)./h;
-                    end
-                    Dnl2 = Dw2{1}*r(1) + Dw2{2}*r(2);
-                end
-                if hbm.options.bAnalyticalDerivs
-                    Dnl = Dnl1;
-                else
-                    Dnl = Dnl2;
-                end
+                [Jxdot,Jxddot,Judot,Juddot,Dw] = hbm_nonlinear3d({'jacobXdot','jacobXddot','jacobUdot','jacobUddot','derivW'},hbm,problem,w0,x,u);
+                Dxdot  = (r(1)*Jxdot{1} + r(2)*Jxdot{2})*x;
+                Dxddot = (2*r(1)*w0(1)*Jxddot{1} + 2*r(2)*w0(2)*Jxddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Jxddot{3})*x;
+                Dudot  = (r(1)*Judot{1} + r(2)*Judot{2})*u;
+                Duddot = (2*r(1)*w0(1)*Juddot{1} + 2*r(2)*w0(2)*Juddot{2} + (r(1)*w0(2) + r(2)*w0(1))*Juddot{3})*u;
+                Dw = r(1)*Dw{1} + r(2)*Dw{2};
+                Dnl = Dxdot + Dxddot + Dudot + Duddot + Dw;
             else
                 Dnl = 0*Dl;
             end

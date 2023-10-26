@@ -64,7 +64,6 @@ elseif size(problem.RDofPlot,2) ~= problem.NDof
 end
   
 function options = setupOptions(options)
-if ~isfield(options,'bAnalyticalDerivs'), options.bAnalyticalDerivs = 1; end
 if ~isfield(options,'bUseStandardHBM'), options.bUseStandardHBM = 0; end
 if ~isfield(options,'bVerbose'), options.bVerbose = 1; end
 if ~isfield(options,'bPlot'), options.bPlot = 1; end

@@ -113,7 +113,6 @@ If method is `predcorr`, you can set the following additional settings in the `c
 
 ### `options` structure
 This sets other more general options and can have the following fields:
-- `bAnalyticalDerivs`: if set to `False` then the derivatives of $f_{nl}$ will be computed from numerical differentiation, and it is not necessary for the `model` callback to return the derivatives
 - `bUseStandardHBM`: force the solver to use the standard HBM when there is a single base frequency.
 - `bVerbose`: toggle whether to suppress output to console
 - `bPlot`: toggle whether to suppress plots
