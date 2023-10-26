@@ -138,8 +138,10 @@ if isfield(problem,'res')
             problem.res.NInput = 1;
         case 'fe'
             problem.res.NInput = problem.NDof;
-        otherwise
+        case {'u','udot','uddot'}
            problem.res.NInput = problem.NInput;
+        otherwise
+            error('invalid input')
     end
 
     if ~isfield(problem.res,'RInput')
@@ -160,7 +162,7 @@ if isfield(problem,'res')
     switch problem.res.output
         case 'none'
             problem.res.NOutput = 1;
-        case 'x'
+        case {'x','xdot','xddot','fnl'}
            problem.res.NOutput = problem.NDof;
         otherwise
             error('invalid output')

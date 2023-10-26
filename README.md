@@ -72,8 +72,8 @@ $$ \frac{\|X_k|}{|F_{e,k}|} $$
 
 The `res` structure should have the following fields to set the numerator and denominator:
 - `iHarm` which sets harmonic to use the terms from
-- `output` which can be either `x` or `none` (to have no output).
-- `input` which can be either `fe` or `unity` (to have no denominator).
+- `output` which can be either `x` (or its derivatives),`fnl`, or `none` (to have no output).
+- `input` which can be either `u` (or its derivatives), `fe` or `unity` (to have no denominator).
 - `NInput` which selects which DOF from `x` to use
 - `NOutput` which selects which index from `fe` to use
 
