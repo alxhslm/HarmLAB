@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+message: "If you use this library, please cite it as below."
+authors:
+  - family-names: Haslam
+    given-names: Alexander
+title: HarmLAB
+url: https://github.com/alxhslm/HarmLAB
